@@ -42,6 +42,17 @@ schema_view = get_schema_view(
 )
 
 
+schema_json_view = schema_view.without_ui(cache_timeout=0)
+schema_swagger_ui_view = schema_view.with_ui('swagger', cache_timeout=0)
+
+
+@require_http_methods(["GET"])
+def swagger_ui(request):
+    if request.GET.get("format") == "openapi":
+        return schema_json_view(request, format=".json")
+    return schema_swagger_ui_view(request)
+
+
 @require_http_methods(["GET", "POST"])
 def admin_logout(request):
     logout(request)
@@ -50,13 +61,14 @@ def admin_logout(request):
 urlpatterns = [
     path('', RedirectView.as_view(url='/swagger/', permanent=False)),
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('swagger/', swagger_ui, name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     
     # API V1 Urls
     path("api/v1/", include("api.urls")),
 
     # Admin URL
+    path('accounts/', include('django.contrib.auth.urls')),
     path('admin/logout/', admin_logout, name='admin-logout'),
     path('admin/', admin.site.urls),
 ]
