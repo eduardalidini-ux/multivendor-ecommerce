@@ -7,7 +7,7 @@ import Addon from '../plugin/Addon';
 import GetCurrentAddress from '../plugin/UserCountry';
 import UserData from '../plugin/UserData';
 import CartID from '../plugin/cartID';
-import { addToCart } from '../plugin/AddToCart';
+import { addToCart } from '../plugin/addToCart';
 
 import { addToWishlist } from '../plugin/addToWishlist';
 import { CartContext } from '../plugin/Context';

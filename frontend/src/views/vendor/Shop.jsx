@@ -6,7 +6,7 @@ import '../style/InvoiceStyle.css'
 import apiInstance from '../../utils/axios';
 import { CartContext } from '../plugin/Context';
 import { addToWishlist } from '../plugin/addToWishlist';
-import { addToCart } from '../plugin/AddToCart';
+import { addToCart } from '../plugin/addToCart';
 import CartID from '../plugin/cartID';
 import GetCurrentAddress from '../plugin/UserCountry';
 import UserData from '../plugin/UserData';

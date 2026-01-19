@@ -5,7 +5,7 @@ import Swal from 'sweetalert2'
 // Icons
 import { FaCheckCircle } from 'react-icons/fa';
 
-import { addToCart } from '../plugin/AddToCart';
+import { addToCart } from '../plugin/addToCart';
 import apiInstance from '../../utils/axios';
 import GetCurrentAddress from '../plugin/UserCountry';
 import UserData from '../plugin/UserData';
