@@ -21,6 +21,7 @@ from django.conf.urls.static import static
 from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.views.decorators.http import require_http_methods
+from django.views.generic import RedirectView
 # drf-yasg imports
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
@@ -46,6 +47,7 @@ def admin_logout(request):
     return redirect(request.GET.get("next") or "/admin/")
 
 urlpatterns = [
+    path('', RedirectView.as_view(url='/swagger/', permanent=False)),
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
