@@ -41,3 +41,4 @@ tzdata==2023.3
 uritemplate==4.1.1
 urllib3>=1.26.18
 Pillow
+setuptools>=69.0.0
