@@ -43,7 +43,7 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 
 INSTALLED_APPS = [
     'jazzmin',
-    'drf_yasg',
+    'drf_spectacular',
     'tinymce',
 
     'django.contrib.admin',
@@ -251,7 +251,8 @@ STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET")
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 ANYMAIL = {

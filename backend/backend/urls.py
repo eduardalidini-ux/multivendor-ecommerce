@@ -22,35 +22,7 @@ from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.views.decorators.http import require_http_methods
 from django.views.generic import RedirectView
-# drf-yasg imports
-from rest_framework import permissions
-from drf_yasg.views import get_schema_view
-from drf_yasg import openapi
-
-schema_view = get_schema_view(
-   openapi.Info(
-      title="E-commerce Backend APIs",
-      default_version='v1',
-      description="This is the API documentation for e-commerce project APIs",
-      terms_of_service="https://www.google.com/policies/terms/",
-      contact=openapi.Contact(email="eduard.alidini@fshnstudent.info"),
-      license=openapi.License(name="BSD License"),
-   ),
-   public=True,
-   authentication_classes=(),
-   permission_classes=(permissions.AllowAny,),
-)
-
-
-schema_json_view = schema_view.without_ui(cache_timeout=0)
-schema_swagger_ui_view = schema_view.with_ui('swagger', cache_timeout=0)
-
-
-@require_http_methods(["GET"])
-def swagger_ui(request):
-    if request.GET.get("format") == "openapi":
-        return schema_json_view(request, format=".json")
-    return schema_swagger_ui_view(request)
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 
 @require_http_methods(["GET", "POST"])
@@ -59,10 +31,9 @@ def admin_logout(request):
     return redirect(request.GET.get("next") or "/admin/")
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/swagger/', permanent=False)),
-    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    path('swagger/', swagger_ui, name='schema-swagger-ui'),
-    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    path('', RedirectView.as_view(url='/api/docs/', permanent=False)),
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     
     # API V1 Urls
     path("api/v1/", include("api.urls")),
