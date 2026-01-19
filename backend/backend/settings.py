@@ -32,7 +32,10 @@ SECRET_KEY = env("SECRET_KEY", default='django-insecure-b*tuoe%^o+=^35$0fufrm=oa
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DEBUG", default=True)
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["website-domain.com", "127.0.0.1", "localhost"])
+ALLOWED_HOSTS = env.list(
+    "ALLOWED_HOSTS",
+    default=["website-domain.com", "127.0.0.1", "localhost", ".onrender.com"],
+)
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 
 
@@ -259,6 +262,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://127.0.0.1",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://*.onrender.com",
 ]
 
 
