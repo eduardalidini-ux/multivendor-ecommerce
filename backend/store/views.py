@@ -93,22 +93,54 @@ class CartApiView(generics.ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         payload = request.data
-        
-        product_id = payload['product']
-        user_id = payload['user']
-        qty = payload['qty']
-        price = payload['price']
-        shipping_amount = payload['shipping_amount']
-        country = payload['country']
-        size = payload['size']
-        color = payload['color']
-        cart_id = payload['cart_id']
-        
+
+        required_fields = [
+            "product",
+            "qty",
+            "price",
+            "shipping_amount",
+            "country",
+            "size",
+            "color",
+            "cart_id",
+        ]
+        missing = [f for f in required_fields if payload.get(f) in (None, "")]
+        if missing:
+            return Response(
+                {"message": "Missing required fields", "missing": missing},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        product_id = payload.get("product")
+        user_id = payload.get("user")
+        qty_raw = payload.get("qty")
+        price_raw = payload.get("price")
+        shipping_amount_raw = payload.get("shipping_amount")
+        country = payload.get("country")
+        size = payload.get("size")
+        color = payload.get("color")
+        cart_id = payload.get("cart_id")
+
         product = Product.objects.filter(status="published", id=product_id).first()
-        if user_id != "undefined":
+        if not product:
+            return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        user = None
+        if user_id not in (None, "", "undefined", "null", 0, "0"):
             user = User.objects.filter(id=user_id).first()
-        else:
-            user = None
+
+        try:
+            qty = int(qty_raw)
+            if qty < 1:
+                raise ValueError("qty must be >= 1")
+        except Exception:
+            return Response({"message": "Invalid qty"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            price = Decimal(str(price_raw))
+            shipping_amount = Decimal(str(shipping_amount_raw))
+        except Exception:
+            return Response({"message": "Invalid price/shipping_amount"}, status=status.HTTP_400_BAD_REQUEST)
         
         tax = Tax.objects.filter(country=country).first()
         if tax:
@@ -124,21 +156,25 @@ class CartApiView(generics.ListCreateAPIView):
             cart.user = user
             cart.qty = qty
             cart.price = price
-            cart.sub_total = Decimal(price) * int(qty)
-            cart.shipping_amount = Decimal(shipping_amount) * int(qty)
+            cart.sub_total = price * qty
+            cart.shipping_amount = shipping_amount * qty
             cart.size = size
-            cart.tax_fee = int(qty) * Decimal(tax_rate)
+            cart.tax_fee = qty * Decimal(tax_rate)
             cart.color = color
             cart.country = country
             cart.cart_id = cart_id
 
             config_settings = ConfigSettings.objects.first()
 
-            if config_settings.service_fee_charge_type == "percentage":
-                service_fee_percentage = config_settings.service_fee_percentage / 100 
-                cart.service_fee = Decimal(service_fee_percentage) * cart.sub_total
+            service_fee_charge_type = getattr(config_settings, "service_fee_charge_type", "percentage")
+            service_fee_percentage_value = getattr(config_settings, "service_fee_percentage", 0)
+            service_fee_flat_rate_value = getattr(config_settings, "service_fee_flat_rate", Decimal("0"))
+
+            if service_fee_charge_type == "percentage":
+                service_fee_percentage = Decimal(service_fee_percentage_value) / Decimal("100")
+                cart.service_fee = service_fee_percentage * cart.sub_total
             else:
-                cart.service_fee = config_settings.service_fee_flat_rate
+                cart.service_fee = Decimal(service_fee_flat_rate_value)
 
             cart.total = cart.sub_total + cart.shipping_amount + cart.service_fee + cart.tax_fee
             cart.save()
@@ -150,21 +186,25 @@ class CartApiView(generics.ListCreateAPIView):
             cart.user = user
             cart.qty = qty
             cart.price = price
-            cart.sub_total = Decimal(price) * int(qty)
-            cart.shipping_amount = Decimal(shipping_amount) * int(qty)
+            cart.sub_total = price * qty
+            cart.shipping_amount = shipping_amount * qty
             cart.size = size
-            cart.tax_fee = int(qty) * Decimal(tax_rate)
+            cart.tax_fee = qty * Decimal(tax_rate)
             cart.color = color
             cart.country = country
             cart.cart_id = cart_id
 
             config_settings = ConfigSettings.objects.first()
 
-            if config_settings.service_fee_charge_type == "percentage":
-                service_fee_percentage = config_settings.service_fee_percentage / 100 
-                cart.service_fee = Decimal(service_fee_percentage) * cart.sub_total
+            service_fee_charge_type = getattr(config_settings, "service_fee_charge_type", "percentage")
+            service_fee_percentage_value = getattr(config_settings, "service_fee_percentage", 0)
+            service_fee_flat_rate_value = getattr(config_settings, "service_fee_flat_rate", Decimal("0"))
+
+            if service_fee_charge_type == "percentage":
+                service_fee_percentage = Decimal(service_fee_percentage_value) / Decimal("100")
+                cart.service_fee = service_fee_percentage * cart.sub_total
             else:
-                cart.service_fee = config_settings.service_fee_flat_rate
+                cart.service_fee = Decimal(service_fee_flat_rate_value)
 
             cart.total = cart.sub_total + cart.shipping_amount + cart.service_fee + cart.tax_fee
             cart.save()
