@@ -5,6 +5,8 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from django.utils import timezone
+
 from api.storage_s3 import presign_get
 
 
@@ -37,6 +39,38 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         # Return the token with custom claims
         return token
+
+    def validate(self, attrs):
+        email = attrs.get("email")
+
+        user = None
+        if email:
+            user = User.objects.filter(email=email).first()
+
+        if user and getattr(user, "is_locked", False):
+            raise serializers.ValidationError({
+                "detail": "Account locked due to too many failed login attempts. Please reset your password via email.",
+            })
+
+        try:
+            data = super().validate(attrs)
+        except Exception:
+            if user:
+                user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+                if user.failed_login_attempts >= 3:
+                    user.is_locked = True
+                    user.locked_at = timezone.now()
+                user.save(update_fields=["failed_login_attempts", "is_locked", "locked_at"])
+            raise
+
+        if user:
+            if user.failed_login_attempts != 0 or user.is_locked or user.locked_at:
+                user.failed_login_attempts = 0
+                user.is_locked = False
+                user.locked_at = None
+                user.save(update_fields=["failed_login_attempts", "is_locked", "locked_at"])
+
+        return data
 
 # Define a serializer for user registration, which inherits from serializers.ModelSerializer
 class RegisterSerializer(serializers.ModelSerializer):

@@ -49,6 +49,9 @@ class User(AbstractUser):
     phone = models.CharField(max_length=500)
     otp = models.CharField(max_length=1000, null=True, blank=True)
     reset_token  = models.CharField(max_length=1000, null=True, blank=True)
+    failed_login_attempts = models.PositiveSmallIntegerField(default=0)
+    is_locked = models.BooleanField(default=False)
+    locked_at = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']

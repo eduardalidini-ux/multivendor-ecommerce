@@ -13,9 +13,8 @@ function CreatePassword() {
     const navigate = useNavigate()
 
     const [searchParams] = useSearchParams();
-    const otp = searchParams.get('otp');
     const uidb64 = searchParams.get('uidb64');
-    const reset_token = searchParams.get('reset_token');
+    const token = searchParams.get('token');
 
 
 
@@ -36,17 +35,14 @@ function CreatePassword() {
             console.log("Password Does Not Match");
         } else {
             setError(false);
-
-            console.log("otp ======", otp);
             console.log("uidb64 ======", uidb64);
-            console.log("reset_token ======", reset_token);
+            console.log("token ======", token);
             console.log("password ======", password);
 
             const formdata = new FormData()
 
-            formdata.append("otp", otp)
             formdata.append("uidb64", uidb64)
-            formdata.append("reset_token", reset_token)
+            formdata.append("token", token)
             formdata.append("password", password)
 
             try {

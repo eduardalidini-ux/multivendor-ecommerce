@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import apiInstance from '../../utils/axios';
 import Swal from 'sweetalert2'
 
@@ -8,9 +7,6 @@ function ForgotPassword() {
     const [email, setEmail] = useState("")
 
     const axios = apiInstance
-    const [searchParams] = useSearchParams();
-    const otp = searchParams.get('otp');
-    const uuid = searchParams.get('uuid');
 
     const handleEmailChange = (event) => {
         setEmail(event.target.value)
@@ -24,6 +20,11 @@ function ForgotPassword() {
             Swal.fire({
                 icon: 'success',
                 title: 'Password Reset Email Sent!',
+            })
+        }).catch(() => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Unable to send reset email',
             })
         })
     }

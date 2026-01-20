@@ -3,6 +3,7 @@ import { login } from '../../utils/auth';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth';
 import { Link } from 'react-router-dom';
+import Swal from 'sweetalert2'
 
 const Login = () => {
     const navigate = useNavigate();
@@ -28,7 +29,10 @@ const Login = () => {
 
         const { error } = await login(username, password);
         if (error) {
-            alert(error);
+            Swal.fire({
+                icon: 'error',
+                title: error,
+            })
         } else {
             navigate('/');
             resetForm();

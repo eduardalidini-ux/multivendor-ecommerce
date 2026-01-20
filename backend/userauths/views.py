@@ -5,7 +5,9 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
+from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_bytes
+from django.utils.encoding import force_str
 
 # Restframework
 from rest_framework import status
@@ -15,7 +17,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework_simplejwt.tokens import RefreshToken
+from django.utils import timezone
 
 # Others
 import json
@@ -119,18 +121,10 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
         user = User.objects.get(email=email)
         
         if user:
-            user.otp = generate_numeric_otp()
-            uidb64 = user.pk
-            
-             # Generate a token and include it in the reset link sent via email
-            refresh = RefreshToken.for_user(user)
-            reset_token = str(refresh.access_token)
+            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
 
-            # Store the reset_token in the user model for later verification
-            user.reset_token = reset_token
-            user.save()
-
-            link = f"http://localhost:5173/create-new-password?otp={user.otp}&uidb64={uidb64}&reset_token={reset_token}"
+            link = f"http://localhost:5173/create-new-password?uidb64={uidb64}&token={token}"
             
             merge_data = {
                 'link': link, 
@@ -155,25 +149,38 @@ class PasswordChangeView(generics.CreateAPIView):
     
     def create(self, request, *args, **kwargs):
         payload = request.data
-        
-        otp = payload['otp']
-        uidb64 = payload['uidb64']
-        reset_token = payload['reset_token']
-        password = payload['password']
 
-        print("otp ======", otp)
-        print("uidb64 ======", uidb64)
-        print("reset_token ======", reset_token)
-        print("password ======", password)
+        uidb64 = payload.get('uidb64')
+        token = payload.get('token')
+        password = payload.get('password')
 
-        user = User.objects.get(id=uidb64, otp=otp)
-        if user:
-            user.set_password(password)
-            user.otp = ""
-            user.reset_token = ""
-            user.save()
+        if not uidb64 or not token or not password:
+            return Response({"message": "Invalid payload"}, status=status.HTTP_400_BAD_REQUEST)
 
-            
-            return Response( {"message": "Password Changed Successfully"}, status=status.HTTP_201_CREATED)
-        else:
-            return Response( {"message": "An Error Occured"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except Exception:
+            return Response({"message": "Invalid reset link"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not default_token_generator.check_token(user, token):
+            return Response({"message": "Invalid or expired reset token"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(password)
+        user.otp = ""
+        user.reset_token = ""
+        user.failed_login_attempts = 0
+        user.is_locked = False
+        user.locked_at = None
+        user.last_login = timezone.now()
+        user.save(update_fields=[
+            "password",
+            "otp",
+            "reset_token",
+            "failed_login_attempts",
+            "is_locked",
+            "locked_at",
+            "last_login",
+        ])
+
+        return Response({"message": "Password Changed Successfully"}, status=status.HTTP_201_CREATED)
