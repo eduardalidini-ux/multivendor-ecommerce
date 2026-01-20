@@ -9,6 +9,8 @@ from rest_framework.views import APIView
 
 from api.storage_s3 import PresignedUrl, guess_content_type, presign_get, presign_put
 
+from drf_spectacular.utils import extend_schema, inline_serializer
+
 import boto3
 from botocore.config import Config
 
@@ -30,6 +32,16 @@ def _require_storage_settings():
 class PresignUploadView(APIView):
     permission_classes = (permissions.AllowAny,)
 
+    @extend_schema(
+        request=inline_serializer(
+            name="PresignUploadRequest",
+            fields={},
+        ),
+        responses=inline_serializer(
+            name="PresignUploadResponse",
+            fields={},
+        ),
+    )
     def post(self, request):
         missing = _require_storage_settings()
         if missing:
@@ -79,6 +91,16 @@ class PresignUploadView(APIView):
 class PresignDownloadView(APIView):
     permission_classes = (permissions.AllowAny,)
 
+    @extend_schema(
+        request=inline_serializer(
+            name="PresignDownloadRequest",
+            fields={},
+        ),
+        responses=inline_serializer(
+            name="PresignDownloadResponse",
+            fields={},
+        ),
+    )
     def post(self, request):
         missing = _require_storage_settings()
         if missing:
@@ -115,6 +137,12 @@ class PresignDownloadView(APIView):
 class DebugS3View(APIView):
     permission_classes = (permissions.AllowAny,)
 
+    @extend_schema(
+        responses=inline_serializer(
+            name="DebugS3Response",
+            fields={},
+        )
+    )
     def get(self, request):
         missing = _require_storage_settings()
         if missing:

@@ -48,7 +48,7 @@ import stripe
 from datetime import datetime as d
 import traceback
 import threading
-
+from drf_spectacular.utils import extend_schema, inline_serializer
 
 class DashboardStatsAPIView(generics.ListAPIView):
     serializer_class = SummarySerializer
@@ -132,6 +132,12 @@ class YearlyOrderReportChartAPIView(generics.ListAPIView):
 
 
 @api_view(('GET',))
+@extend_schema(
+    responses=inline_serializer(
+        name="MonthlyOrderChartResponse",
+        fields={},
+    )
+)
 def MonthlyOrderChartAPIFBV(request, vendor_id):
     vendor = Vendor.objects.get(id=vendor_id)
     orders = CartOrder.objects.filter(vendor=vendor)
@@ -141,6 +147,12 @@ def MonthlyOrderChartAPIFBV(request, vendor_id):
 
 
 @api_view(('GET',))
+@extend_schema(
+    responses=inline_serializer(
+        name="MonthlyProductsChartResponse",
+        fields={},
+    )
+)
 def MonthlyProductsChartAPIFBV(request, vendor_id):
     vendor = Vendor.objects.get(id=vendor_id)
     products = Product.objects.filter(vendor=vendor)
@@ -425,6 +437,12 @@ class Earning(generics.ListAPIView):
 
 
 @api_view(('GET',))
+@extend_schema(
+    responses=inline_serializer(
+        name="MonthlyEarningTrackerResponse",
+        fields={},
+    )
+)
 def MonthlyEarningTracker(request, vendor_id):
     vendor = Vendor.objects.get(id=vendor_id)
     monthly_earning_tracker = (

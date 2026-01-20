@@ -139,6 +139,10 @@ class ColorSerializer(serializers.ModelSerializer):
 # Define a serializer for the Product model
 class ProductSerializer(serializers.ModelSerializer):
     image = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=500)
+    product_rating = serializers.FloatField(source='product_rating', read_only=True)
+    rating_count = serializers.IntegerField(source='rating_count', read_only=True)
+    order_count = serializers.IntegerField(source='order_count', read_only=True)
+    get_precentage = serializers.FloatField(source='get_precentage', read_only=True)
     # Serialize related Category, Tag, and Brand models
     # category = CategorySerializer(many=True, read_only=True)
     # tags = TagSerializer(many=True, read_only=True)

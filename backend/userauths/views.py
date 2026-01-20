@@ -25,6 +25,9 @@ from django.utils import timezone
 import json
 import random
 
+# Schema
+from drf_spectacular.utils import extend_schema, inline_serializer
+
 # Serializers
 from userauths.serializer import MyTokenObtainPairSerializer, ProfileSerializer, RegisterSerializer, UserSerializer
 
@@ -44,6 +47,11 @@ def send_email_brevo(*, to_email: str, to_name: str, subject: str, html_content:
     sender_name = getattr(settings, "BREVO_SENDER_NAME", "")
     if not sender_email:
         raise RuntimeError("Brevo sender email not configured")
+
+    html_content = "" if html_content is None else str(html_content)
+    text_content = "" if text_content is None else str(text_content)
+    if not text_content.strip():
+        text_content = subject or " "
 
     payload = {
         "sender": {"email": sender_email, "name": sender_name},
@@ -85,6 +93,14 @@ class RegisterView(generics.CreateAPIView):
 
 # This is a DRF view defined as a Python function using the @api_view decorator.
 @api_view(['GET'])
+@extend_schema(
+    responses=inline_serializer(
+        name="RoutesResponse",
+        fields={
+            "routes": inline_serializer(name="Routes", fields={}),
+        },
+    ),
+)
 def getRoutes(request):
     # It defines a list of API routes that can be accessed.
     routes = [
@@ -101,6 +117,20 @@ def getRoutes(request):
 # It is decorated with the @permission_classes decorator specifying that only authenticated users can access this view.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@extend_schema(
+    request=inline_serializer(
+        name="TestEndPointRequest",
+        fields={
+            "text": inline_serializer(name="TestEndPointText", fields={}),
+        },
+    ),
+    responses=inline_serializer(
+        name="TestEndPointResponse",
+        fields={
+            "response": inline_serializer(name="TestEndPointResponseValue", fields={}),
+        },
+    ),
+)
 def testEndPoint(request):
     # Check if the HTTP request method is GET.
     if request.method == 'GET':
