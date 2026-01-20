@@ -139,10 +139,10 @@ class ColorSerializer(serializers.ModelSerializer):
 # Define a serializer for the Product model
 class ProductSerializer(serializers.ModelSerializer):
     image = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=500)
-    product_rating = serializers.FloatField(source='product_rating', read_only=True)
-    rating_count = serializers.IntegerField(source='rating_count', read_only=True)
-    order_count = serializers.IntegerField(source='order_count', read_only=True)
-    get_precentage = serializers.FloatField(source='get_precentage', read_only=True)
+    product_rating = serializers.SerializerMethodField()
+    rating_count = serializers.SerializerMethodField()
+    order_count = serializers.SerializerMethodField()
+    get_precentage = serializers.SerializerMethodField()
     # Serialize related Category, Tag, and Brand models
     # category = CategorySerializer(many=True, read_only=True)
     # tags = TagSerializer(many=True, read_only=True)
@@ -219,6 +219,18 @@ class ProductSerializer(serializers.ModelSerializer):
     def validate_image(self, value):
         return _maybe_extract_storage_key(value)
     
+    def get_product_rating(self, obj):
+        return obj.product_rating() if obj.pk else 0
+
+    def get_rating_count(self, obj):
+        return obj.rating_count() if obj.pk else 0
+
+    def get_order_count(self, obj):
+        return obj.order_count() if obj.pk else 0
+
+    def get_get_precentage(self, obj):
+        return obj.get_precentage()
+
     def __init__(self, *args, **kwargs):
         super(ProductSerializer, self).__init__(*args, **kwargs)
         # Customize serialization depth based on the request method.

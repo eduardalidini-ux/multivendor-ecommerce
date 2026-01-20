@@ -40,12 +40,14 @@ logger = logging.getLogger(__name__)
 
 def send_email_brevo(*, to_email: str, to_name: str, subject: str, html_content: str, text_content: str) -> dict:
     api_key = getattr(settings, "BREVO_API_KEY", "")
-    if not api_key:
+    if not api_key or api_key.strip() == "":
+        logger.error("Brevo API key not configured or empty")
         raise RuntimeError("Brevo API key not configured")
 
     sender_email = getattr(settings, "BREVO_SENDER_EMAIL", "")
     sender_name = getattr(settings, "BREVO_SENDER_NAME", "")
-    if not sender_email:
+    if not sender_email or sender_email.strip() == "":
+        logger.error("Brevo sender email not configured or empty")
         raise RuntimeError("Brevo sender email not configured")
 
     html_content = "" if html_content is None else str(html_content)
@@ -54,12 +56,14 @@ def send_email_brevo(*, to_email: str, to_name: str, subject: str, html_content:
         text_content = subject or " "
 
     payload = {
-        "sender": {"email": sender_email, "name": sender_name},
+        "sender": {"email": sender_email, "name": sender_name or ""},
         "to": [{"email": to_email, "name": to_name or ""}],
         "subject": subject,
         "htmlContent": html_content,
         "textContent": text_content,
     }
+
+    logger.info(f"Attempting to send email via Brevo to {to_email}")
 
     resp = requests.post(
         "https://api.brevo.com/v3/smtp/email",
@@ -71,14 +75,20 @@ def send_email_brevo(*, to_email: str, to_name: str, subject: str, html_content:
         },
         timeout=getattr(settings, "BREVO_TIMEOUT", 15),
     )
-    if not resp.ok:
-        raise RuntimeError(f"Brevo API error {resp.status_code}: {resp.text}")
-
+    
     data = {}
     try:
         data = resp.json() if resp.text else {}
     except Exception:
         data = {"raw": resp.text}
+
+    if not resp.ok:
+        logger.error(f"Brevo API error {resp.status_code}: {resp.text}")
+        raise RuntimeError(f"Brevo API error {resp.status_code}: {data.get('message', resp.text)}")
+
+    # Check if messageId is present - indicates successful queuing
+    if not data.get("messageId"):
+        logger.warning(f"Brevo response missing messageId: {data}")
 
     logger.info(
         "Brevo email accepted",
@@ -226,6 +236,12 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
                 html_content=html_body,
                 text_content=text_body,
             )
+            
+            # Check if Brevo actually queued the email
+            message_id = brevo_resp.get("messageId")
+            if not message_id:
+                logger.warning(f"Brevo accepted request but no messageId returned for {user.email}")
+                
         except Exception as e:
             logger.exception("Password reset email send failed")
             message = "Unable to send reset email"
@@ -236,6 +252,7 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
         payload = {"message": "Password reset email sent"}
         if getattr(settings, "DEBUG", False):
             payload["brevo"] = brevo_resp
+            payload["messageId"] = brevo_resp.get("messageId")
         return Response(payload, status=status.HTTP_200_OK)
     
 
