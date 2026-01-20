@@ -301,6 +301,7 @@ function UpdateProduct() {
         text: 'This product has been successfully updated',
       });
 
+      const data = await response.json();
     } catch (error) {
       console.error('Error submitting form:', error);
       setIsLoading(false)
