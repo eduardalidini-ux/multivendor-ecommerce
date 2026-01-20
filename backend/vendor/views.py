@@ -336,8 +336,8 @@ class ProductDeleteAPIView(generics.DestroyAPIView):
         vendor_id = self.kwargs['vendor_id']
         product_pid = self.kwargs['product_pid']
 
-        vendor = Vendor.objects.get(id=vendor_id)
-        product = Product.objects.get(vendor=vendor, pid=product_pid)
+        vendor = get_object_or_404(Vendor, id=vendor_id)
+        product = get_object_or_404(Product, vendor=vendor, pid=product_pid)
         return product
 
 
