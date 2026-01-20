@@ -230,8 +230,8 @@ class ProductUpdateAPIView(generics.RetrieveUpdateAPIView):
         vendor_id = self.kwargs['vendor_id']
         product_pid = self.kwargs['product_pid']
 
-        vendor = Vendor.objects.get(id=vendor_id)
-        product = Product.objects.get(vendor=vendor, pid=product_pid)
+        vendor = get_object_or_404(Vendor, id=vendor_id)
+        product = get_object_or_404(Product, vendor=vendor, pid=product_pid)
         return product
 
     @transaction.atomic
@@ -239,9 +239,21 @@ class ProductUpdateAPIView(generics.RetrieveUpdateAPIView):
         product = self.get_object()
 
         # Deserialize product data
-        serializer = self.get_serializer(product, data=request.data)
+        partial = kwargs.pop('partial', request.method.upper() == 'PATCH')
+        serializer = self.get_serializer(product, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
+
+        has_nested_payload = any(
+            key.startswith('specifications')
+            or key.startswith('colors')
+            or key.startswith('sizes')
+            or key.startswith('gallery')
+            for key in self.request.data.keys()
+        )
+
+        if not has_nested_payload:
+            return Response({'message': 'Product Updated'}, status=status.HTTP_200_OK)
 
         # Delete all existing nested data
         product.specification().delete()
