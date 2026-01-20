@@ -13,10 +13,14 @@ function Orders() {
     
 
     useEffect(() => {
+        if (!userData?.user_id) return;
         axios.get(`customer/orders/${userData?.user_id}/`).then((res) => {
             setOrders(res.data)
         })
-    }, [])
+    }, [userData?.user_id])
+
+    const pendingDeliveryCount = orders.filter((o) => o.order_status === "Pending").length;
+    const fulfilledOrdersCount = orders.filter((o) => o.order_status === "Fulfilled").length;
 
     console.log(orders);
 
@@ -75,7 +79,7 @@ function Orders() {
                                                         <div className="">
                                                             <p className="mb-1">Pending Delivery</p>
                                                             <h2 className="mb-0">
-                                                                6
+                                                                {pendingDeliveryCount}
                                                                 <span
                                                                     className=""
                                                                     style={{ fontSize: "0.875rem" }}
@@ -104,7 +108,7 @@ function Orders() {
                                                         <div className="">
                                                             <p className="mb-1">Fulfilled Orders</p>
                                                             <h2 className="mb-0">
-                                                                2
+                                                                {fulfilledOrdersCount}
                                                                 <span
                                                                     className=""
                                                                     style={{ fontSize: "0.875rem" }}

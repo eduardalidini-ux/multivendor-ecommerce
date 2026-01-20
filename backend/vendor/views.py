@@ -739,10 +739,13 @@ class OrderItemDetailAPIView(generics.RetrieveUpdateAPIView):
         instance.tracking_id = request.data.get('tracking_id', instance.tracking_id)
 
         delivery_couriers_id = request.data.get('delivery_couriers')
-        delivery_couriers = DeliveryCouriers.objects.get(id=delivery_couriers_id)
-        instance.delivery_couriers = delivery_couriers
+        if delivery_couriers_id not in (None, ""):
+            delivery_couriers = DeliveryCouriers.objects.get(id=delivery_couriers_id)
+            instance.delivery_couriers = delivery_couriers
 
-        
+        delivery_status = request.data.get('delivery_status')
+        if delivery_status not in (None, ""):
+            instance.delivery_status = delivery_status
 
         notify_buyer = request.data.get('notify_buyer')
         if notify_buyer == 'true':
@@ -764,6 +767,21 @@ class OrderItemDetailAPIView(generics.RetrieveUpdateAPIView):
             msg.send()
 
         instance.save()
+
+        try:
+            order = instance.order
+            items = CartOrderItem.objects.filter(order=order)
+            if items.exists():
+                delivered_count = items.filter(delivery_status="Delivered").count()
+                if delivered_count == items.count():
+                    order.order_status = "Fulfilled"
+                elif delivered_count > 0:
+                    order.order_status = "Partially Fulfilled"
+                else:
+                    order.order_status = "Pending"
+                order.save(update_fields=["order_status"])
+        except Exception:
+            pass
 
         serializer = self.get_serializer(instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
