@@ -9,6 +9,8 @@ from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_bytes
 from django.utils.encoding import force_str
 
+import logging
+
 # Restframework
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -29,6 +31,8 @@ from userauths.serializer import MyTokenObtainPairSerializer, ProfileSerializer,
 
 # Models
 from userauths.models import Profile, User
+
+logger = logging.getLogger(__name__)
 
 
 # This code defines a DRF View class called MyTokenObtainPairView, which inherits from TokenObtainPairView.
@@ -142,9 +146,15 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
         )
         msg.attach_alternative(html_body, "text/html")
         try:
-            msg.send()
-        except Exception:
-            return Response({"message": "Unable to send reset email"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            sent_count = msg.send()
+            if sent_count != 1:
+                raise RuntimeError(f"Email backend reported {sent_count} emails sent")
+        except Exception as e:
+            logger.exception("Password reset email send failed")
+            message = "Unable to send reset email"
+            if getattr(settings, "DEBUG", False):
+                message = f"Unable to send reset email: {e}"
+            return Response({"message": message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"message": "Password reset email sent"}, status=status.HTTP_200_OK)
     
