@@ -10,12 +10,6 @@ const apiInstance = axios.create({
     
     // Set a timeout for requests made using this instance. If a request takes longer than 5 seconds to complete, it will be canceled.
     timeout: 100000, // timeout after 5 seconds
-    
-    // Define headers that will be included in every request made using this instance. This is common for specifying the content type and accepted response type.
-    headers: {
-        'Content-Type': 'application/json', // The request will be sending data in JSON format.
-        Accept: 'application/json', // The request expects a response in JSON format.
-    },
 });
 
 // Export the 'apiInstance' so that it can be used in other parts of the codebase. Other modules can import and use this Axios instance for making API requests.
