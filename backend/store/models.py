@@ -220,9 +220,9 @@ class Brand(models.Model):
 # Model for Products
 class Product(models.Model):
     # Product title
-    title = models.CharField(max_length=100)
+    title = models.CharField(max_length=255)
     # Image for the product
-    image = models.FileField(upload_to=user_directory_path, blank=True, null=True, default="product.jpg")
+    image = models.FileField(upload_to=user_directory_path, blank=True, null=True, default="product.jpg", max_length=500)
     # Description for the product using HTML
     description = models.TextField(null=True, blank=True)
     
@@ -231,7 +231,7 @@ class Product(models.Model):
     # Tags associated with the product
     tags = models.CharField(max_length=1000, null=True, blank=True)
     # Brand associated with the product
-    brand = models.CharField(max_length=100, null=True, blank=True)
+    brand = models.CharField(max_length=255, null=True, blank=True)
 
     # Price and other financial details
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=True, blank=True)

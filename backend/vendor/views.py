@@ -23,6 +23,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.exceptions import ValidationError
 
 # Serializers
 from userauths.serializer import MyTokenObtainPairSerializer, ProfileSerializer, RegisterSerializer
@@ -322,6 +323,8 @@ class ProductUpdateAPIView(generics.RetrieveUpdateAPIView):
             self.save_nested_data(product, GallerySerializer, gallery_data)
 
             return Response({'message': 'Product Updated'}, status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             print('ProductUpdateAPIView.update error:', str(e))
             print(traceback.format_exc())

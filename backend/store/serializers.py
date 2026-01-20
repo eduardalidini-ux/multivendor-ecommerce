@@ -133,7 +133,7 @@ class ColorSerializer(serializers.ModelSerializer):
 
 # Define a serializer for the Product model
 class ProductSerializer(serializers.ModelSerializer):
-    image = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    image = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=500)
     # Serialize related Category, Tag, and Brand models
     # category = CategorySerializer(many=True, read_only=True)
     # tags = TagSerializer(many=True, read_only=True)
@@ -187,6 +187,20 @@ class ProductSerializer(serializers.ModelSerializer):
             'order_count',
             "get_precentage",
         ]
+
+    def validate_title(self, value):
+        if value is None:
+            return value
+        if len(str(value)) > 255:
+            raise serializers.ValidationError("Ensure this field has no more than 255 characters.")
+        return value
+
+    def validate_brand(self, value):
+        if value is None:
+            return value
+        if len(str(value)) > 255:
+            raise serializers.ValidationError("Ensure this field has no more than 255 characters.")
+        return value
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
