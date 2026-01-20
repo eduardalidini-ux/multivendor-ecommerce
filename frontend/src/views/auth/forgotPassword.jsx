@@ -5,6 +5,7 @@ import Swal from 'sweetalert2'
 function ForgotPassword() {
 
     const [email, setEmail] = useState("")
+    const [isSending, setIsSending] = useState(false)
 
     const axios = apiInstance
 
@@ -15,17 +16,22 @@ function ForgotPassword() {
 
 
     const handleEmailSubmit = () => {
+        if (!email || isSending) return;
+        setIsSending(true)
+
         axios.get(`user/password-reset/${email}/`).then((res) => {
             console.log(res.data);
             Swal.fire({
                 icon: 'success',
                 title: 'Password Reset Email Sent!',
             })
-        }).catch(() => {
+        }).catch((error) => {
             Swal.fire({
                 icon: 'error',
-                title: 'Unable to send reset email',
+                title: error?.response?.data?.message || 'Unable to send reset email',
             })
+        }).finally(() => {
+            setIsSending(false)
         })
     }
 
@@ -65,7 +71,9 @@ function ForgotPassword() {
                                                     </div>
 
                                                     <div className="text-center">
-                                                        <button onClick={handleEmailSubmit} className='btn btn-primary w-100'>Reset Password</button>
+                                                        <button onClick={handleEmailSubmit} disabled={isSending} className='btn btn-primary w-100'>
+                                                            {isSending ? 'Sending...' : 'Reset Password'}
+                                                        </button>
                                                     </div>
 
                                                 </div>

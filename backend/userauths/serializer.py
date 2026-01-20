@@ -49,7 +49,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         if user and getattr(user, "is_locked", False):
             raise serializers.ValidationError({
-                "detail": "Account locked due to too many failed login attempts. Please reset your password via email.",
+                "detail": "Account locked due to too many failed login attempts. Please reset your password via email (click 'Forgot Password?' on the login page).",
             })
 
         try:

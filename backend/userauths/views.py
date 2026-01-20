@@ -115,19 +115,19 @@ def generate_numeric_otp(length=7):
 class PasswordEmailVerify(generics.RetrieveAPIView):
     permission_classes = (AllowAny,)
     serializer_class = UserSerializer
-    
-    def get_object(self):
+
+    def get(self, request, *args, **kwargs):
         email = self.kwargs['email']
         user = User.objects.filter(email=email).first()
-        
+
         if not user:
-            return None
+            return Response({"message": "User with this email does not exist"}, status=status.HTTP_404_NOT_FOUND)
 
         uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
 
         link = f"{settings.SITE_URL}/create-new-password?uidb64={uidb64}&token={token}"
-            
+
         merge_data = {
             'link': link,
             'username': user.username,
@@ -144,8 +144,9 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
         try:
             msg.send()
         except Exception:
-            return None
-        return user
+            return Response({"message": "Unable to send reset email"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({"message": "Password reset email sent"}, status=status.HTTP_200_OK)
     
 
 class PasswordChangeView(generics.CreateAPIView):
