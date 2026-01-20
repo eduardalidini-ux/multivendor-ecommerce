@@ -1,13 +1,15 @@
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+from django.conf import settings
+from urllib.parse import urlparse
 
 from store.models import CancelledOrder, Cart, CartOrderItem, Notification, CouponUsers, Product, Tag ,Category, DeliveryCouriers, CartOrder, Gallery, Brand, ProductFaq, Review,  Specification, Coupon, Color, Size, Address, Wishlist, Vendor
 from addon.models import ConfigSettings
 from store.models import Gallery
 from userauths.serializer import ProfileSerializer, UserSerializer
 
-from api.storage_s3 import presign_get
+from api.storage_s3 import presign_get, normalize_key
 
 
 def _maybe_presign(value: str | None) -> str | None:
@@ -16,6 +18,25 @@ def _maybe_presign(value: str | None) -> str | None:
     if isinstance(value, str) and '://' in value:
         return value
     return presign_get(str(value))
+
+
+def _maybe_extract_storage_key(value: str | None) -> str | None:
+    if not value:
+        return value
+    if not isinstance(value, str):
+        return str(value)
+    if '://' not in value:
+        return normalize_key(value)
+
+    parsed = urlparse(value)
+    path = (parsed.path or '').lstrip('/')
+    if not path:
+        return ''
+
+    bucket = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', None)
+    if bucket and path.startswith(f"{bucket}/"):
+        path = path[len(bucket) + 1:]
+    return normalize_key(path)
 
 class ConfigSettingsSerializer(serializers.ModelSerializer):
 
@@ -36,6 +57,10 @@ class CategorySerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data['image'] = _maybe_presign(data.get('image'))
         return data
+
+    def validate_image(self, value):
+        return _maybe_extract_storage_key(value)
+
 
 # Define a serializer for the Tag model
 class TagSerializer(serializers.ModelSerializer):
@@ -72,6 +97,9 @@ class GallerySerializer(serializers.ModelSerializer):
         data['image'] = _maybe_presign(data.get('image'))
         return data
 
+    def validate_image(self, value):
+        return _maybe_extract_storage_key(value)
+
 # Define a serializer for the Specification model
 class SpecificationSerializer(serializers.ModelSerializer):
 
@@ -98,6 +126,9 @@ class ColorSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data['image'] = _maybe_presign(data.get('image'))
         return data
+    
+    def validate_image(self, value):
+        return _maybe_extract_storage_key(value)
 
 
 # Define a serializer for the Product model
@@ -161,6 +192,9 @@ class ProductSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data['image'] = _maybe_presign(data.get('image'))
         return data
+
+    def validate_image(self, value):
+        return _maybe_extract_storage_key(value)
     
     def __init__(self, *args, **kwargs):
         super(ProductSerializer, self).__init__(*args, **kwargs)
