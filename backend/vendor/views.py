@@ -47,6 +47,7 @@ import requests
 import stripe
 from datetime import datetime as d
 import traceback
+import threading
 
 
 class DashboardStatsAPIView(generics.ListAPIView):
@@ -467,7 +468,6 @@ class ReviewsDetailAPIView(generics.RetrieveUpdateAPIView):
         return review
 
 
-
 class CouponListAPIView(generics.ListAPIView):
     serializer_class = CouponSerializer
     queryset = Coupon.objects.all()
@@ -556,7 +556,8 @@ class NotificationUnSeenListAPIView(generics.ListAPIView):
         vendor = Vendor.objects.get(id=vendor_id)
         notifications = Notification.objects.filter(vendor=vendor, seen=False).order_by('seen')
         return notifications
-    
+
+
 class NotificationSeenListAPIView(generics.ListAPIView):
     serializer_class = NotificationSerializer
     queryset = Notification.objects.all()
@@ -567,7 +568,8 @@ class NotificationSeenListAPIView(generics.ListAPIView):
         vendor = Vendor.objects.get(id=vendor_id)
         notifications = Notification.objects.filter(vendor=vendor, seen=True).order_by('seen')
         return notifications
-    
+
+
 class NotificationSummaryAPIView(generics.ListAPIView):
     serializer_class = NotificationSummarySerializer
 
@@ -590,7 +592,7 @@ class NotificationSummaryAPIView(generics.ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    
+
 class NotificationMarkAsSeen(generics.RetrieveUpdateAPIView):
     serializer_class = NotificationSerializer
     permission_classes = (AllowAny, )
@@ -603,55 +605,6 @@ class NotificationMarkAsSeen(generics.RetrieveUpdateAPIView):
         notification.seen = True
         notification.save()
         return notification
-    
-
-############################ Less Redundant Notfication Code ############################
-# class NotificationAPIView(generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
-#     serializer_class = NotificationSerializer
-#     permission_classes = (AllowAny, )
-
-#     def get_queryset(self):
-#         vendor_id = self.kwargs['vendor_id']
-#         vendor = Vendor.objects.get(id=vendor_id)
-        
-#         seen_param = self.request.query_params.get('seen', None)
-
-#         if seen_param == 'true':
-#             return Notification.objects.filter(vendor=vendor, seen=True).order_by('seen')
-#         elif seen_param == 'false':
-#             return Notification.objects.filter(vendor=vendor, seen=False).order_by('seen')
-#         else:
-#             return Notification.objects.filter(vendor=vendor).order_by('seen')
-
-#     def list(self, request, *args, **kwargs):
-#         if 'summary' in request.query_params:
-#             return self.get_summary(request, *args, **kwargs)
-#         return super().list(request, *args, **kwargs)
-
-#     def get_summary(self, request, *args, **kwargs):
-#         vendor_id = kwargs['vendor_id']
-#         vendor = Vendor.objects.get(id=vendor_id)
-
-#         un_read_noti = Notification.objects.filter(vendor=vendor, seen=False).count()
-#         read_noti = Notification.objects.filter(vendor=vendor, seen=True).count()
-#         all_noti = Notification.objects.filter(vendor=vendor).count()
-
-#         return Response({
-#             'un_read_noti': un_read_noti,
-#             'read_noti': read_noti,
-#             'all_noti': all_noti,
-#         })
-
-#     def perform_update(self, serializer):
-#         serializer.instance.seen = True
-#         serializer.save()
-
-# Example URL patterns in urls.py:
-# path('notifications/<int:vendor_id>/', NotificationAPIView.as_view(), name='notification-list'),
-# path('notifications/<int:vendor_id>/<int:pk>/', NotificationAPIView.as_view(), name='notification-detail'),
-
-
-
 
 
 class VendorProfileUpdateView(generics.RetrieveUpdateAPIView):
@@ -664,7 +617,7 @@ class VendorProfileUpdateView(generics.RetrieveUpdateAPIView):
 class ShopUpdateView(generics.RetrieveUpdateAPIView):
     queryset = Vendor.objects.all()
     serializer_class = VendorSerializer
-    permission_classes = (AllowAny, )      
+    permission_classes = (AllowAny, )
     parser_classes = (MultiPartParser, FormParser)
 
 
@@ -678,7 +631,7 @@ class ShopAPIView(generics.RetrieveUpdateAPIView):
 
         vendor = Vendor.objects.get(slug=vendor_slug)
         return vendor
-    
+
 
 class ShopProductsAPIView(generics.ListAPIView):
     serializer_class = ProductSerializer
@@ -689,7 +642,8 @@ class ShopProductsAPIView(generics.ListAPIView):
         vendor = Vendor.objects.get(slug=vendor_slug)
         products = Product.objects.filter(vendor=vendor)
         return products
-    
+
+
 class VendorRegister(generics.CreateAPIView):
     serializer_class = VendorSerializer
     queryset = Vendor.objects.all()
@@ -714,15 +668,14 @@ class VendorRegister(generics.CreateAPIView):
             user_id=user_id,
         )
 
-        return Response({"message":"Created vendor account"})
-    
+        return Response({"message": "Created vendor account"})
+
 
 class CourierListAPIView(generics.ListAPIView):
     queryset = DeliveryCouriers.objects.all()
     serializer_class = DeliveryCouriersSerializer
     permission_classes = [AllowAny]
 
-    
 
 class OrderItemDetailAPIView(generics.RetrieveUpdateAPIView):
     serializer_class = CartOrderItemSerializer
@@ -733,7 +686,7 @@ class OrderItemDetailAPIView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         pk = self.kwargs['pk']
         return CartOrderItem.objects.get(id=pk)
-    
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
 
@@ -763,29 +716,37 @@ class OrderItemDetailAPIView(generics.RetrieveUpdateAPIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            try:
-                merge_data = {
-                    'instance': instance,
-                    'tracking_id': instance.tracking_id,
-                    'delivery_couriers': instance.delivery_couriers.name,
-                    'tracking_link': f"{instance.delivery_couriers.tracking_website}?{instance.delivery_couriers.url_parameter}={instance.tracking_id}",
-                }
-                subject = f"Tracking ID Added for {instance.product.title}"
-                text_body = render_to_string("email/tracking_id_added.txt", merge_data)
-                html_body = render_to_string("email/tracking_id_added.html", merge_data)
+            buyer_email = instance.order.email
+            product_title = instance.product.title
+            courier_name = instance.delivery_couriers.name
+            tracking_link = f"{instance.delivery_couriers.tracking_website}?{instance.delivery_couriers.url_parameter}={instance.tracking_id}"
+            tracking_id = instance.tracking_id
 
-                msg = EmailMultiAlternatives(
-                    subject=subject, from_email=settings.FROM_EMAIL,
-                    to=[instance.order.email], body=text_body
-                )
-                msg.attach_alternative(html_body, "text/html")
-                msg.send()
-            except Exception:
-                instance.save()
-                return Response(
-                    {"message": "Tracking saved, but failed to send notification email"},
-                    status=status.HTTP_200_OK,
-                )
+            def _send_tracking_email():
+                try:
+                    merge_data = {
+                        'instance': instance,
+                        'tracking_id': tracking_id,
+                        'delivery_couriers': courier_name,
+                        'tracking_link': tracking_link,
+                    }
+                    subject = f"Tracking ID Added for {product_title}"
+                    text_body = render_to_string("email/tracking_id_added.txt", merge_data)
+                    html_body = render_to_string("email/tracking_id_added.html", merge_data)
+
+                    msg = EmailMultiAlternatives(
+                        subject=subject,
+                        from_email=settings.FROM_EMAIL,
+                        to=[buyer_email],
+                        body=text_body,
+                    )
+                    msg.attach_alternative(html_body, "text/html")
+                    msg.send(fail_silently=True)
+                except Exception:
+                    pass
+
+            # Don't block the request on SMTP (prevents Gunicorn worker timeouts).
+            threading.Thread(target=_send_tracking_email, daemon=True).start()
 
         instance.save()
 
