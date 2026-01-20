@@ -16,6 +16,9 @@ def _maybe_presign(value: str | None) -> str | None:
     if not value:
         return value
     if isinstance(value, str) and '://' in value:
+        extracted = _maybe_extract_storage_key(value)
+        if extracted and extracted != value:
+            return presign_get(str(extracted))
         return value
     return presign_get(str(value))
 
@@ -34,6 +37,8 @@ def _maybe_extract_storage_key(value: str | None) -> str | None:
         return ''
 
     bucket = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', None)
+    if bucket and path.startswith(f"storage/v1/s3/{bucket}/"):
+        path = path[len(f"storage/v1/s3/{bucket}/"):]
     if bucket and path.startswith(f"{bucket}/"):
         path = path[len(bucket) + 1:]
     return normalize_key(path)

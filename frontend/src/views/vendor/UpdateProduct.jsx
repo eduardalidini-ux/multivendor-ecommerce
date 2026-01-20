@@ -136,10 +136,14 @@ function UpdateProduct() {
     const file = event.target.files[0];
 
     if (file) {
-      setProduct({
-        ...product,
-        image: file,
-      });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProduct({
+          ...product,
+          image: { file, preview: reader.result },
+        });
+      };
+      reader.readAsDataURL(file);
     } else {
       // Handle the case when no file is selected
       setProduct({
@@ -211,9 +215,9 @@ function UpdateProduct() {
         formData.append(key, value);
       });
 
-      if (product.image && product.image instanceof File) {
+      if (product.image?.file) {
         const uploaded = await uploadFile({
-          file: product.image,
+          file: product.image.file,
           keyPrefix: `products/${userData?.vendor_id}`,
         });
         if (uploaded?.key) {
@@ -377,7 +381,7 @@ function UpdateProduct() {
                                   className="form-control"
                                   name="image"
                                   id=""
-                                  onChange={handleProductFileChange || product.image}
+                                  onChange={handleProductFileChange}
                                 />
                               </div>
                               <div className="col-lg-12 mb-2 ">
@@ -760,7 +764,7 @@ function UpdateProduct() {
                                 <div className="col-lg-3 mt-2">
                                   {c.image && (
                                     <img
-                                      src={c.image.preview}
+                                      src={c.image?.preview || c.image}
                                       alt={`Preview for gallery item ${index + 1}`}
                                       style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: 5 }}
                                     />

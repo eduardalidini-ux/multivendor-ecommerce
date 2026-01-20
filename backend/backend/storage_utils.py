@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Iterable
 
+from botocore.exceptions import ClientError
+
 
 def delete_field_file(
     instance,
@@ -23,7 +25,17 @@ def delete_field_file(
     if required_prefixes and not any(name.startswith(p) for p in required_prefixes):
         return
 
-    f.delete(save=False)
+    try:
+        f.delete(save=False)
+    except ClientError as e:
+        code = (
+            e.response.get("Error", {}).get("Code")
+            if getattr(e, "response", None)
+            else None
+        )
+        if code in {"NoSuchKey", "404", "NotFound"}:
+            return
+        raise
 
 
 def _s3_client_from_settings():
