@@ -554,39 +554,45 @@ def finalize_order_payment(order):
     order.payment_status = "paid"
     order.save()
 
-    if order.buyer != None:
-        send_notification(user=order.buyer, order=order)
+    try:
+        if order.buyer != None:
+            send_notification(user=order.buyer, order=order)
 
-    for o in order_items:
-        send_notification(vendor=o.vendor, order=order, order_item=o)
+        for o in order_items:
+            send_notification(vendor=o.vendor, order=order, order_item=o)
+    except Exception:
+        pass
 
-    merge_data = {
-        'order': order,
-        'order_items': order_items,
-    }
+    try:
+        merge_data = {
+            'order': order,
+            'order_items': order_items,
+        }
 
-    subject = f"Order Placed Successfully"
-    text_body = render_to_string("email/customer_order_confirmation.txt", merge_data)
-    html_body = render_to_string("email/customer_order_confirmation.html", merge_data)
-
-    msg = EmailMultiAlternatives(
-        subject=subject, from_email=settings.FROM_EMAIL,
-        to=[order.email], body=text_body
-    )
-    msg.attach_alternative(html_body, "text/html")
-    msg.send()
-
-    for o in order_items:
-        subject = f"New Sale!"
-        text_body = render_to_string("email/vendor_order_sale.txt", merge_data)
-        html_body = render_to_string("email/vendor_order_sale.html", merge_data)
+        subject = f"Order Placed Successfully"
+        text_body = render_to_string("email/customer_order_confirmation.txt", merge_data)
+        html_body = render_to_string("email/customer_order_confirmation.html", merge_data)
 
         msg = EmailMultiAlternatives(
             subject=subject, from_email=settings.FROM_EMAIL,
-            to=[o.vendor.email], body=text_body
+            to=[order.email], body=text_body
         )
         msg.attach_alternative(html_body, "text/html")
         msg.send()
+
+        for o in order_items:
+            subject = f"New Sale!"
+            text_body = render_to_string("email/vendor_order_sale.txt", merge_data)
+            html_body = render_to_string("email/vendor_order_sale.html", merge_data)
+
+            msg = EmailMultiAlternatives(
+                subject=subject, from_email=settings.FROM_EMAIL,
+                to=[o.vendor.email], body=text_body
+            )
+            msg.attach_alternative(html_body, "text/html")
+            msg.send()
+    except Exception:
+        pass
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -607,18 +613,22 @@ class StripeWebhookView(View):
         except (ValueError, stripe.error.SignatureVerificationError):
             return HttpResponse(status=400)
 
-        event_type = event.get('type')
-        if event_type == 'checkout.session.completed':
-            session = event['data']['object']
-            if session.get('payment_status') == 'paid':
-                order_oid = (session.get('metadata') or {}).get('order_oid')
-                order = None
-                if order_oid:
-                    order = CartOrder.objects.select_for_update().filter(oid=order_oid).first()
-                if not order:
-                    order = CartOrder.objects.select_for_update().filter(stripe_session_id=session.get('id')).first()
-                if order and order.payment_status == 'processing':
-                    finalize_order_payment(order)
+        try:
+            event_type = event.get('type')
+            if event_type == 'checkout.session.completed':
+                session = event['data']['object']
+                if session.get('payment_status') == 'paid':
+                    with transaction.atomic():
+                        order_oid = (session.get('metadata') or {}).get('order_oid')
+                        order = None
+                        if order_oid:
+                            order = CartOrder.objects.select_for_update().filter(oid=order_oid).first()
+                        if not order:
+                            order = CartOrder.objects.select_for_update().filter(stripe_session_id=session.get('id')).first()
+                        if order and order.payment_status == 'processing':
+                            finalize_order_payment(order)
+        except Exception:
+            return HttpResponse(status=200)
 
         return HttpResponse(status=200)
 
