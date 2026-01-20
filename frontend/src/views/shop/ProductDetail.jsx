@@ -101,7 +101,7 @@ function ProductDetail() {
     const handleAddToCart = async () => {
         try {
             // Assuming addToCart is an async function
-            await addToCart(product.id, userData?.user_id, qtyValue, product.price, product.shipping_amount, currentAddress.country, sizeValue, colorValue, cart_id, setIsAddingToCart);
+            await addToCart(product.id, userData?.user_id, qtyValue, product.price, product.shipping_amount, currentAddress.country, colorValue, sizeValue, cart_id, setIsAddingToCart);
 
             const url = userData?.user_id ? `cart-list/${cart_id}/${userData?.user_id}/` : `cart-list/${cart_id}/`;
             const response = await axios.get(url);

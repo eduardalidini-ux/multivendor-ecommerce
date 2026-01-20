@@ -57,21 +57,15 @@ function Cart() {
         console.log(cartTotal);
     }, [cartTotal]);
 
-    if (cart_id !== null || cart_id !== undefined) {
-        if (userData !== undefined) {
-            useEffect(() => {
-                fetchCartData(cart_id, userData.user_id);
-                fetchCartTotal(cart_id, userData.user_id);
-            }, []);
-        } else {
-            useEffect(() => {
-                fetchCartData(cart_id, null);
-                fetchCartTotal(cart_id, null);
-            }, []);
+    useEffect(() => {
+        if (cart_id === null || cart_id === undefined) {
+            window.location.href("/");
+            return;
         }
-    } else {
-        window.location.href("/");
-    }
+
+        fetchCartData(cart_id, userData?.user_id);
+        fetchCartTotal(cart_id, userData?.user_id);
+    }, [cart_id, userData?.user_id]);
 
 
     useEffect(() => {
@@ -80,7 +74,7 @@ function Cart() {
             initialQuantities[c.product.id] = c.qty
         });
         setProductQuantities(initialQuantities);
-    }, productQuantities);
+    }, [cart]);
 
     const handleQtyChange = (event, product_id) => {
         const quantity = event.target.value;
@@ -102,7 +96,7 @@ function Cart() {
 
         try {
             // Await the addToCart function
-            await addToCart(product_id, userData?.user_id, qtyValue, price, shipping_amount, currentAddress.country, color, size, cart_id, isAddingToCart);
+            await addToCart(product_id, userData?.user_id, qtyValue, price, shipping_amount, currentAddress.country, color, size, cart_id, setIsAddingToCart);
 
             // Fetch the latest cart data after addToCart is completed
             fetchCartData(cart_id, userData?.user_id)

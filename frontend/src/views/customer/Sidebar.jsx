@@ -1,6 +1,7 @@
 import { React, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom'
 import UseProfileData from '../plugin/UseProfileData'
+import apiInstance from '../../utils/axios';
 
 
 function Sidebar() {
@@ -8,12 +9,37 @@ function Sidebar() {
     const userProfile = UseProfileData()
     let [loading, setLoading] = useState(true);
 
+    const [counts, setCounts] = useState({
+        orders: 0,
+        wishlist: 0,
+        notifications: 0,
+    });
+
     useEffect(() => {
         if (userProfile) {
             setLoading(false)
         }
+    }, [userProfile])
 
-    })
+    useEffect(() => {
+        const userId = userProfile?.user?.id;
+        if (!userId) return;
+
+        const axios = apiInstance;
+        Promise.all([
+            axios.get(`customer/orders/${userId}/`),
+            axios.get(`customer/wishlist/${userId}/`),
+            axios.get(`customer/notification/${userId}/`),
+        ]).then(([ordersRes, wishlistRes, notificationsRes]) => {
+            setCounts({
+                orders: Array.isArray(ordersRes.data) ? ordersRes.data.length : 0,
+                wishlist: Array.isArray(wishlistRes.data) ? wishlistRes.data.length : 0,
+                notifications: Array.isArray(notificationsRes.data) ? notificationsRes.data.length : 0,
+            });
+        }).catch((err) => {
+            console.log(err);
+        });
+    }, [userProfile?.user?.id]);
 
     return (
         <div className="col-lg-3">
@@ -42,19 +68,19 @@ function Sidebar() {
                             <div className="ms-2 me-auto">
                                 <Link to={'/customer/orders/'} className="fw-bold text-dark"><i className='fas fa-shopping-cart me-2'></i>Orders</Link>
                             </div>
-                            <span className="badge bg-primary rounded-pill">14</span>
+                            <span className="badge bg-primary rounded-pill">{counts.orders}</span>
                         </li>
                         <li className="list-group-item d-flex justify-content-between align-items-start">
                             <div className="ms-2 me-auto">
                                 <Link to={'/customer/wishlist/'} className="fw-bold text-dark"><i className='fas fa-heart fa-fade me-2'></i> Wishlist</Link>
                             </div>
-                            <span className="badge bg-primary rounded-pill">14</span>
+                            <span className="badge bg-primary rounded-pill">{counts.wishlist}</span>
                         </li>
                         <li className="list-group-item d-flex justify-content-between align-items-start">
                             <div className="ms-2 me-auto">
                                 <Link to={'/customer/notifications/'} className="fw-bold text-dark"><i className='fas fa-bell fa-shake me-2'></i> Notification</Link>
                             </div>
-                            <span className="badge bg-primary rounded-pill">14</span>
+                            <span className="badge bg-primary rounded-pill">{counts.notifications}</span>
                         </li>
                         <li className="list-group-item d-flex justify-content-between align-items-start">
                             <div className="ms-2 me-auto">
