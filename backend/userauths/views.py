@@ -118,28 +118,33 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
     
     def get_object(self):
         email = self.kwargs['email']
-        user = User.objects.get(email=email)
+        user = User.objects.filter(email=email).first()
         
-        if user:
-            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-            token = default_token_generator.make_token(user)
+        if not user:
+            return None
 
-            link = f"http://localhost:5173/create-new-password?uidb64={uidb64}&token={token}"
+        uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+
+        link = f"{settings.SITE_URL}/create-new-password?uidb64={uidb64}&token={token}"
             
-            merge_data = {
-                'link': link, 
-                'username': user.username, 
-            }
-            subject = f"Password Reset Request"
-            text_body = render_to_string("email/password_reset.txt", merge_data)
-            html_body = render_to_string("email/password_reset.html", merge_data)
-            
-            msg = EmailMultiAlternatives(
-                subject=subject, from_email=settings.FROM_EMAIL,
-                to=[user.email], body=text_body
-            )
-            msg.attach_alternative(html_body, "text/html")
+        merge_data = {
+            'link': link,
+            'username': user.username,
+        }
+        subject = f"Password Reset Request"
+        text_body = render_to_string("email/password_reset.txt", merge_data)
+        html_body = render_to_string("email/password_reset.html", merge_data)
+
+        msg = EmailMultiAlternatives(
+            subject=subject, from_email=settings.FROM_EMAIL,
+            to=[user.email], body=text_body
+        )
+        msg.attach_alternative(html_body, "text/html")
+        try:
             msg.send()
+        except Exception:
+            return None
         return user
     
 
