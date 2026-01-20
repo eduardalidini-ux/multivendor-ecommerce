@@ -1,6 +1,5 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
@@ -10,6 +9,7 @@ from django.utils.encoding import force_bytes
 from django.utils.encoding import force_str
 
 import logging
+import requests
 
 # Restframework
 from rest_framework import status
@@ -33,6 +33,38 @@ from userauths.serializer import MyTokenObtainPairSerializer, ProfileSerializer,
 from userauths.models import Profile, User
 
 logger = logging.getLogger(__name__)
+
+
+def send_email_brevo(*, to_email: str, to_name: str, subject: str, html_content: str, text_content: str) -> None:
+    api_key = getattr(settings, "BREVO_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("Brevo API key not configured")
+
+    sender_email = getattr(settings, "BREVO_SENDER_EMAIL", "")
+    sender_name = getattr(settings, "BREVO_SENDER_NAME", "")
+    if not sender_email:
+        raise RuntimeError("Brevo sender email not configured")
+
+    payload = {
+        "sender": {"email": sender_email, "name": sender_name},
+        "to": [{"email": to_email, "name": to_name or ""}],
+        "subject": subject,
+        "htmlContent": html_content,
+        "textContent": text_content,
+    }
+
+    resp = requests.post(
+        "https://api.brevo.com/v3/smtp/email",
+        json=payload,
+        headers={
+            "api-key": api_key,
+            "accept": "application/json",
+            "content-type": "application/json",
+        },
+        timeout=getattr(settings, "BREVO_TIMEOUT", 15),
+    )
+    if not resp.ok:
+        raise RuntimeError(f"Brevo API error {resp.status_code}: {resp.text}")
 
 
 # This code defines a DRF View class called MyTokenObtainPairView, which inherits from TokenObtainPairView.
@@ -140,15 +172,14 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
         text_body = render_to_string("email/password_reset.txt", merge_data)
         html_body = render_to_string("email/password_reset.html", merge_data)
 
-        msg = EmailMultiAlternatives(
-            subject=subject, from_email=settings.FROM_EMAIL,
-            to=[user.email], body=text_body
-        )
-        msg.attach_alternative(html_body, "text/html")
         try:
-            sent_count = msg.send()
-            if sent_count != 1:
-                raise RuntimeError(f"Email backend reported {sent_count} emails sent")
+            send_email_brevo(
+                to_email=user.email,
+                to_name=user.username,
+                subject=subject,
+                html_content=html_body,
+                text_content=text_body,
+            )
         except Exception as e:
             logger.exception("Password reset email send failed")
             message = "Unable to send reset email"
