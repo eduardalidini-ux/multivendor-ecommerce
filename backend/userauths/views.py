@@ -38,7 +38,7 @@ from userauths.models import Profile, User
 logger = logging.getLogger(__name__)
 
 
-def send_email_brevo(*, to_email: str, to_name: str, subject: str, html_content: str, text_content: str) -> None:
+def send_email_brevo(*, to_email: str, to_name: str, subject: str, html_content: str, text_content: str) -> dict:
     api_key = getattr(settings, "BREVO_API_KEY", "")
     if not api_key:
         raise RuntimeError("Brevo API key not configured")
@@ -73,6 +73,22 @@ def send_email_brevo(*, to_email: str, to_name: str, subject: str, html_content:
     )
     if not resp.ok:
         raise RuntimeError(f"Brevo API error {resp.status_code}: {resp.text}")
+
+    data = {}
+    try:
+        data = resp.json() if resp.text else {}
+    except Exception:
+        data = {"raw": resp.text}
+
+    logger.info(
+        "Brevo email accepted",
+        extra={
+            "to_email": to_email,
+            "status_code": resp.status_code,
+            "brevo_response": data,
+        },
+    )
+    return data
 
 
 # This code defines a DRF View class called MyTokenObtainPairView, which inherits from TokenObtainPairView.
@@ -203,7 +219,7 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
         html_body = render_to_string("email/password_reset.html", merge_data)
 
         try:
-            send_email_brevo(
+            brevo_resp = send_email_brevo(
                 to_email=user.email,
                 to_name=user.username,
                 subject=subject,
@@ -217,7 +233,10 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
                 message = f"Unable to send reset email: {e}"
             return Response({"message": message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response({"message": "Password reset email sent"}, status=status.HTTP_200_OK)
+        payload = {"message": "Password reset email sent"}
+        if getattr(settings, "DEBUG", False):
+            payload["brevo"] = brevo_resp
+        return Response(payload, status=status.HTTP_200_OK)
     
 
 class PasswordChangeView(generics.CreateAPIView):

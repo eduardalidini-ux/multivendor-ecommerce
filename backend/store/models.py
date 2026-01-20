@@ -288,7 +288,16 @@ class Product(models.Model):
 
     # Calculates the discount percentage between old and new prices
     def get_precentage(self):
-        new_price = ((self.old_price - self.price) / self.old_price) * 100
+        if not self.old_price:
+            return 0
+        try:
+            old_price = float(self.old_price)
+            price = float(self.price or 0)
+        except Exception:
+            return 0
+        if old_price <= 0:
+            return 0
+        new_price = ((old_price - price) / old_price) * 100
         return round(new_price, 0)
     
     # Calculates the average rating of the product
@@ -296,7 +305,7 @@ class Product(models.Model):
         if not self.pk:
             return 0
         product_rating = Review.objects.filter(product=self).aggregate(avg_rating=models.Avg('rating'))
-        return product_rating['avg_rating']
+        return product_rating['avg_rating'] or 0
     
     # Returns the count of ratings for the product
     def rating_count(self):
