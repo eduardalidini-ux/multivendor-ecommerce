@@ -219,16 +219,16 @@ class ProductSerializer(serializers.ModelSerializer):
     def validate_image(self, value):
         return _maybe_extract_storage_key(value)
     
-    def get_product_rating(self, obj):
+    def get_product_rating(self, obj) -> float:
         return obj.product_rating() if obj.pk else 0
 
-    def get_rating_count(self, obj):
+    def get_rating_count(self, obj) -> int:
         return obj.rating_count() if obj.pk else 0
 
-    def get_order_count(self, obj):
+    def get_order_count(self, obj) -> int:
         return obj.order_count() if obj.pk else 0
 
-    def get_get_precentage(self, obj):
+    def get_get_precentage(self, obj) -> float:
         return obj.get_precentage()
 
     def __init__(self, *args, **kwargs):

@@ -14,6 +14,7 @@ from django.core.mail import EmailMultiAlternatives, send_mail
 from django.template.loader import render_to_string
 
 # Restframework Packages
+from rest_framework import serializers
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -134,8 +135,12 @@ class YearlyOrderReportChartAPIView(generics.ListAPIView):
 @api_view(('GET',))
 @extend_schema(
     responses=inline_serializer(
-        name="MonthlyOrderChartResponse",
-        fields={},
+        name="MonthlyOrderChartItem",
+        fields={
+            "month": serializers.IntegerField(),
+            "orders": serializers.IntegerField(),
+        },
+        many=True,
     )
 )
 def MonthlyOrderChartAPIFBV(request, vendor_id):
@@ -149,8 +154,12 @@ def MonthlyOrderChartAPIFBV(request, vendor_id):
 @api_view(('GET',))
 @extend_schema(
     responses=inline_serializer(
-        name="MonthlyProductsChartResponse",
-        fields={},
+        name="MonthlyProductsChartItem",
+        fields={
+            "month": serializers.IntegerField(),
+            "orders": serializers.IntegerField(),
+        },
+        many=True,
     )
 )
 def MonthlyProductsChartAPIFBV(request, vendor_id):
@@ -439,8 +448,13 @@ class Earning(generics.ListAPIView):
 @api_view(('GET',))
 @extend_schema(
     responses=inline_serializer(
-        name="MonthlyEarningTrackerResponse",
-        fields={},
+        name="MonthlyEarningTrackerItem",
+        fields={
+            "month": serializers.IntegerField(),
+            "sales_count": serializers.IntegerField(),
+            "total_earning": serializers.FloatField(),
+        },
+        many=True,
     )
 )
 def MonthlyEarningTracker(request, vendor_id):

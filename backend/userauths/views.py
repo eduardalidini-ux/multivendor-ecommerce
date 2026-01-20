@@ -13,6 +13,7 @@ import requests
 
 # Restframework
 from rest_framework import status
+from rest_framework import serializers
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -123,7 +124,7 @@ class RegisterView(generics.CreateAPIView):
     responses=inline_serializer(
         name="RoutesResponse",
         fields={
-            "routes": inline_serializer(name="Routes", fields={}),
+            "routes": serializers.ListField(child=serializers.CharField()),
         },
     ),
 )
@@ -136,7 +137,7 @@ def getRoutes(request):
         '/api/test/'
     ]
     # It returns a DRF Response object containing the list of routes.
-    return Response(routes)
+    return Response({"routes": routes})
 
 
 # This is another DRF view defined as a Python function using the @api_view decorator.
@@ -147,13 +148,13 @@ def getRoutes(request):
     request=inline_serializer(
         name="TestEndPointRequest",
         fields={
-            "text": inline_serializer(name="TestEndPointText", fields={}),
+            "text": serializers.CharField(),
         },
     ),
     responses=inline_serializer(
         name="TestEndPointResponse",
         fields={
-            "response": inline_serializer(name="TestEndPointResponseValue", fields={}),
+            "response": serializers.CharField(),
         },
     ),
 )
@@ -241,6 +242,10 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
             message_id = brevo_resp.get("messageId")
             if not message_id:
                 logger.warning(f"Brevo accepted request but no messageId returned for {user.email}")
+                return Response(
+                    {"message": "Unable to confirm reset email delivery", "messageId": None},
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
                 
         except Exception as e:
             logger.exception("Password reset email send failed")
@@ -249,10 +254,9 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
                 message = f"Unable to send reset email: {e}"
             return Response({"message": message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        payload = {"message": "Password reset email sent"}
+        payload = {"message": "Password reset email sent", "messageId": brevo_resp.get("messageId")}
         if getattr(settings, "DEBUG", False):
             payload["brevo"] = brevo_resp
-            payload["messageId"] = brevo_resp.get("messageId")
         return Response(payload, status=status.HTTP_200_OK)
     
 
