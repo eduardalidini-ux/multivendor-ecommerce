@@ -728,6 +728,7 @@ class OrderItemDetailAPIView(generics.RetrieveUpdateAPIView):
     serializer_class = CartOrderItemSerializer
     permission_classes = [AllowAny]
     queryset = CartOrderItem.objects.all()
+    parser_classes = (MultiPartParser, FormParser)
 
     def get_object(self):
         pk = self.kwargs['pk']
@@ -740,7 +741,13 @@ class OrderItemDetailAPIView(generics.RetrieveUpdateAPIView):
 
         delivery_couriers_id = request.data.get('delivery_couriers')
         if delivery_couriers_id not in (None, ""):
-            delivery_couriers = DeliveryCouriers.objects.get(id=delivery_couriers_id)
+            try:
+                delivery_couriers = DeliveryCouriers.objects.get(id=delivery_couriers_id)
+            except DeliveryCouriers.DoesNotExist:
+                return Response(
+                    {"message": "Invalid delivery courier"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             instance.delivery_couriers = delivery_couriers
 
         delivery_status = request.data.get('delivery_status')
@@ -748,23 +755,37 @@ class OrderItemDetailAPIView(generics.RetrieveUpdateAPIView):
             instance.delivery_status = delivery_status
 
         notify_buyer = request.data.get('notify_buyer')
-        if notify_buyer == 'true':
-            merge_data = {
-                'instance': instance, 
-                'tracking_id': instance.tracking_id, 
-                'delivery_couriers': instance.delivery_couriers.name, 
-                'tracking_link': f"{instance.delivery_couriers.tracking_website}?{instance.delivery_couriers.url_parameter}={instance.tracking_id}", 
-            }
-            subject = f"Tracking ID Added for {instance.product.title}"
-            text_body = render_to_string("email/tracking_id_added.txt", merge_data)
-            html_body = render_to_string("email/tracking_id_added.html", merge_data)
-            
-            msg = EmailMultiAlternatives(
-                subject=subject, from_email=settings.FROM_EMAIL,
-                to=[instance.order.email], body=text_body
-            )
-            msg.attach_alternative(html_body, "text/html")
-            msg.send()
+        should_notify = notify_buyer in (True, 'true', 'True', '1', 1)
+        if should_notify:
+            if not instance.delivery_couriers or not instance.tracking_id:
+                return Response(
+                    {"message": "Courier and tracking_id are required to notify buyer"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            try:
+                merge_data = {
+                    'instance': instance,
+                    'tracking_id': instance.tracking_id,
+                    'delivery_couriers': instance.delivery_couriers.name,
+                    'tracking_link': f"{instance.delivery_couriers.tracking_website}?{instance.delivery_couriers.url_parameter}={instance.tracking_id}",
+                }
+                subject = f"Tracking ID Added for {instance.product.title}"
+                text_body = render_to_string("email/tracking_id_added.txt", merge_data)
+                html_body = render_to_string("email/tracking_id_added.html", merge_data)
+
+                msg = EmailMultiAlternatives(
+                    subject=subject, from_email=settings.FROM_EMAIL,
+                    to=[instance.order.email], body=text_body
+                )
+                msg.attach_alternative(html_body, "text/html")
+                msg.send()
+            except Exception:
+                instance.save()
+                return Response(
+                    {"message": "Tracking saved, but failed to send notification email"},
+                    status=status.HTTP_200_OK,
+                )
 
         instance.save()
 
