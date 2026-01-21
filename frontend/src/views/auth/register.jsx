@@ -11,13 +11,36 @@ function Register() {
     const [password2, setPassword2] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+    const allUserData = useAuthStore((state) => state.allUserData);
     const navigate = useNavigate();
+
+    const redirectAfterAuth = () => {
+        const token = useAuthStore.getState().allUserData;
+        if (!token) {
+            navigate('/');
+            return;
+        }
+
+        if (token.is_warehouse_manager) {
+            navigate('/warehouse/dashboard');
+            return;
+        }
+        if (token.is_courier) {
+            navigate('/courier/dashboard');
+            return;
+        }
+        if ((token.vendor_id || 0) > 0) {
+            navigate('/vendor/dashboard/');
+            return;
+        }
+        navigate('/customer/account/');
+    };
 
     useEffect(() => {
         if (isLoggedIn()) {
-            navigate('/');
+            redirectAfterAuth();
         }
-    }, []);
+    }, [allUserData]);
 
     const resetForm = () => {
         setFullname('');
@@ -37,7 +60,7 @@ function Register() {
         if (error) {
             alert(JSON.stringify(error));
         } else {
-            navigate('/');
+            redirectAfterAuth();
             resetForm();
         }
 

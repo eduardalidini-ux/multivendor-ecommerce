@@ -1,0 +1,128 @@
+WAREHOUSE + COURIER + INTERNAL TRACKING (CHECKLIST PLAN)
+Project: MultiVendorEcommerce
+Scope decisions (confirmed):
+[x] One React app (existing frontend). New "Warehouse" area is just new routes/pages.
+[x] Same login page (/login). After login, redirect to the correct dashboard based on role.
+[x] Courier assignment is PER ORDER (CartOrder), not per order item.
+[x] Tracking page must exist internally and show a real timeline/logs (not an external courier website).
+
+------------------------------------------------------------
+PHASE 0 — PREP / SCOPE SAFETY
+[x] Define delivery workflow statuses for an order-level shipment:
+    - pending_assignment
+    - assigned
+    - picked_up
+    - out_for_delivery
+    - delivered
+    - failed
+    - returned
+[x] Decide which orders are eligible to be shipped:
+    - recommended: payment_status == "paid" (or "processing" if you ship before webhook confirms)
+[x] Decide who can view internal tracking:
+    - buyer, admin/staff, warehouse manager, assigned courier, vendors on the order
+
+------------------------------------------------------------
+PHASE 1 — BACKEND: DATA MODEL + ROLES (Django)
+[x] Create a new Django app: warehouse
+[x] Add models:
+    [x] CourierProfile (OneToOne User, is_active, optional phone/vehicle)
+    [x] WarehouseManagerProfile (OneToOne User, is_active)
+    [x] Shipment (OneToOne store.CartOrder, courier FK User nullable, assigned_by FK User nullable,
+        status, assigned_at/picked_up_at/delivered_at timestamps)
+    [x] ShipmentEvent (FK Shipment, event_type, message, created_by FK User nullable, created_at)
+[x] Add admin registrations for these models (so you can manage couriers/managers quickly).
+
+------------------------------------------------------------
+PHASE 2 — BACKEND: AUTH CLAIMS + PERMISSIONS (DRF)
+[x] Update JWT claims in MyTokenObtainPairSerializer so the frontend can route users:
+    [x] is_courier
+    [x] is_warehouse_manager
+[x] Add DRF permissions:
+    [x] IsCourier (authenticated + CourierProfile.is_active)
+    [x] IsWarehouseManager (authenticated + WarehouseManagerProfile.is_active)
+[x] Apply these permissions to new warehouse endpoints.
+[ ] Review existing endpoints used by this feature and remove AllowAny where it exposes sensitive data.
+
+------------------------------------------------------------
+PHASE 3 — BACKEND: APIS (ORDER-LEVEL ASSIGNMENT + TRACKING)
+[x] Add API urls: api/v1/warehouse/...
+
+Warehouse manager endpoints:
+[x] GET warehouse/couriers/               -> list active couriers
+[x] GET warehouse/orders/unassigned/      -> list orders (CartOrder) eligible to assign (no Shipment/courier)
+[x] POST warehouse/assign/                -> assign courier to CartOrder (create/update Shipment)
+    [x] Use transaction.atomic() to create Shipment + ShipmentEvent + any mirrored status changes
+    [x] Create ShipmentEvent: "Assigned to courier X"
+
+Courier endpoints:
+[x] GET warehouse/courier/my-shipments/   -> list shipments assigned to logged-in courier
+[x] PATCH warehouse/courier/shipment/<id>/status/ -> update shipment status
+    [x] Validate shipment belongs to courier
+    [x] Create ShipmentEvent for every status change
+    [x] On delivered: update all CartOrderItem.delivery_status="Delivered" (or the chosen mapping)
+
+Tracking endpoint (internal page data source):
+[x] GET warehouse/track/order/<order_oid or order_id>/
+    [ ] Returns shipment status, courier (if assigned), events timeline, summary of order items
+    [x] Permissions: buyer OR admin/staff OR warehouse manager OR assigned courier OR vendor on the order
+
+------------------------------------------------------------
+PHASE 4 — FRONTEND: ROUTES + ROLE REDIRECT
+[x] Add new React routes in App.jsx:
+    [x] /warehouse/dashboard
+    [x] /warehouse/orders
+    [x] /warehouse/orders/:orderId
+    [x] /courier/dashboard
+    [x] /courier/shipments/:shipmentId
+    [x] /track/order/:orderOid   (internal tracking page)
+[x] Implement role-based redirect after login:
+    [x] If token.is_warehouse_manager -> /warehouse/dashboard
+    [x] Else if token.is_courier -> /courier/dashboard
+    [x] Else if token.vendor_id > 0 -> /vendor/dashboard
+    [x] Else -> /customer/account
+
+------------------------------------------------------------
+PHASE 5 — FRONTEND: WAREHOUSE MANAGER UI (ASSIGN COURIER)
+[x] Page: Warehouse Dashboard
+    [ ] show KPI: unassigned shipments, assigned, delivered
+[x] Page: Unassigned Orders
+    [x] list orders eligible for shipping (paid, not assigned)
+    [ ] show order oid, customer name, address, number of items, vendors
+[x] Page: Order Detail / Assign
+    [x] fetch list of couriers
+    [x] assign courier -> POST warehouse/assign/
+    [x] show shipment timeline after assignment
+
+------------------------------------------------------------
+PHASE 6 — FRONTEND: COURIER UI (MY SHIPMENTS + STATUS UPDATES)
+[x] Courier dashboard
+    [x] list shipments assigned to me
+[x] Courier shipment detail
+    [x] show destination address
+    [x] buttons for status transitions
+    [x] show shipment events timeline
+
+------------------------------------------------------------
+PHASE 7 — FRONTEND: INTERNAL TRACKING PAGE (REPLACES FAKE URL)
+[x] Tracking page: /track/order/:orderOid
+    [x] show shipment status + timeline events
+    [x] show courier name (if assigned)
+    [x] show order items overview
+[ ] Replace tracking links across customer/vendor/admin UI to point to internal tracking first:
+    [x] Customer order detail: Track -> /track/order/<order_oid>
+    [x] Vendor order detail: Track -> /track/order/<order_oid>
+    [ ] Keep external courier tracking link optional (secondary button) if you still want it
+
+------------------------------------------------------------
+PHASE 8 — HARDENING / QA (MINIMIZE ERRORS)
+[ ] Add input validation + clear API errors (400/403/404)
+[ ] Ensure sensitive endpoints are not AllowAny
+[ ] Ensure assignment and status updates use transaction.atomic()
+[ ] Manual QA checklist:
+    [ ] Place order -> pay -> order appears in warehouse unassigned
+    [ ] Assign courier -> courier sees it
+    [ ] Courier updates statuses -> tracking page updates timeline
+    [ ] Delivered -> all order items marked delivered + order becomes Fulfilled when appropriate
+[ ] Deploy verification:
+    [ ] Run migrations on Render DB
+    [ ] Smoke-test login + tracking page + dashboards

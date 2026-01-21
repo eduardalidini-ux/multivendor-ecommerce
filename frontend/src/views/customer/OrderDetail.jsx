@@ -242,10 +242,7 @@ function OrderDetail() {
                                       <span className="fw-normal mb-1 text-danger"> -${order.saved}</span>
                                     </td>
                                     <td>
-                                      {order.tracking_id == null || order.tracking_id == 'undefined'
-                                        ? <button class="btn btn-secondary btn-sm" disabled> No Tracking Yet<i className='fas fa-plus'></i></button>
-                                        : <a class="btn btn-success btn-sm" target='_blank' href={`${order.delivery_couriers?.tracking_website}?${order.delivery_couriers?.url_parameter}=${order.tracking_id}`}> Track Item <i className='fas fa-location-arrow'></i></a>
-                                      }
+                                      <Link class="btn btn-success btn-sm" to={`/track/order/${param?.order_oid}`}> Track Order <i className='fas fa-location-arrow'></i></Link>
                                     </td>
                                   </tr>
                                 ))}

@@ -10,13 +10,36 @@ const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+    const allUserData = useAuthStore((state) => state.allUserData);
     const [isLoading, setIsLoading] = useState(false);
+
+    const redirectAfterAuth = () => {
+        const token = useAuthStore.getState().allUserData;
+        if (!token) {
+            navigate('/');
+            return;
+        }
+
+        if (token.is_warehouse_manager) {
+            navigate('/warehouse/dashboard');
+            return;
+        }
+        if (token.is_courier) {
+            navigate('/courier/dashboard');
+            return;
+        }
+        if ((token.vendor_id || 0) > 0) {
+            navigate('/vendor/dashboard/');
+            return;
+        }
+        navigate('/customer/account/');
+    };
 
     useEffect(() => {
         if (isLoggedIn()) {
-            navigate('/');
+            redirectAfterAuth();
         }
-    }, []);
+    }, [allUserData]);
 
     const resetForm = () => {
         setUsername('');
@@ -34,7 +57,7 @@ const Login = () => {
                 title: error,
             })
         } else {
-            navigate('/');
+            redirectAfterAuth();
             resetForm();
         }
         setIsLoading(false);

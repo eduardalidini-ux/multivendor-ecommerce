@@ -52,6 +52,10 @@ function OrderDetail() {
                       <i className="fas fa-shopping-cart text-primary" /> #{order.oid}{" "}
                     </h3>
 
+                    <div className='mb-3'>
+                      <Link className='btn btn-outline-primary' to={`/track/order/${order.oid}`}>Track Order</Link>
+                    </div>
+
                     <div className="row gx-xl-5">
                       <div className="col-lg-3 mb-4 mb-lg-0">
                         <div

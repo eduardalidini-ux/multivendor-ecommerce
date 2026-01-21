@@ -46,6 +46,13 @@ import CreatePassword from './views/auth/createPassword';
 import VendorRegister from './views/vendor/VendorRegister';
 import OrderItemDetail from './views/vendor/OrderItemDetail';
 
+import WarehouseDashboard from './views/warehouse/Dashboard';
+import WarehouseUnassignedOrders from './views/warehouse/UnassignedOrders';
+import WarehouseOrderAssign from './views/warehouse/OrderAssign';
+import CourierDashboard from './views/courier/Dashboard';
+import CourierShipmentDetail from './views/courier/ShipmentDetail';
+import TrackOrder from './views/tracking/TrackOrder';
+
 
 
 function App() { // Define the main 'App' component.
@@ -120,6 +127,18 @@ function App() { // Define the main 'App' component.
                         <Route path="/vendor/:slug/" element={<Shop />} />
                         <Route path="/vendor/register/" element={<VendorRegister />} />
                         <Route path="/vendor/orders/:oid/:id/" element={<OrderItemDetail />} />
+
+                        {/* Warehouse Routes */}
+                        <Route path="/warehouse/dashboard" element={<PrivateRoute><WarehouseDashboard /></PrivateRoute>} />
+                        <Route path="/warehouse/orders" element={<PrivateRoute><WarehouseUnassignedOrders /></PrivateRoute>} />
+                        <Route path="/warehouse/orders/:orderOid" element={<PrivateRoute><WarehouseOrderAssign /></PrivateRoute>} />
+
+                        {/* Courier Routes */}
+                        <Route path="/courier/dashboard" element={<PrivateRoute><CourierDashboard /></PrivateRoute>} />
+                        <Route path="/courier/shipments/:shipmentId" element={<PrivateRoute><CourierShipmentDetail /></PrivateRoute>} />
+
+                        {/* Internal Tracking */}
+                        <Route path="/track/order/:orderOid" element={<PrivateRoute><TrackOrder /></PrivateRoute>} />
 
                     </Routes>
                 </MainWrapper>
