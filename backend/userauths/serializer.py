@@ -2,6 +2,7 @@ from userauths.models import Profile, User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
+from rest_framework.exceptions import APIException
 from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -11,6 +12,12 @@ from api.storage_s3 import presign_get
 
 
 # Define a custom serializer that inherits from TokenObtainPairSerializer
+class AccountLocked(APIException):
+    status_code = 423
+    default_detail = "Account is locked. Please reset your password."
+    default_code = "account_locked"
+
+
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     '''
     class MyTokenObtainPairSerializer(TokenObtainPairSerializer):: This line creates a new token serializer called MyTokenObtainPairSerializer that is based on an existing one called TokenObtainPairSerializer. Think of it as customizing the way tokens work.
@@ -48,9 +55,9 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             user = User.objects.filter(email=email).first()
 
         if user and getattr(user, "is_locked", False):
-            raise serializers.ValidationError({
-                "detail": "Account locked due to too many failed login attempts. Please reset your password via email (click 'Forgot Password?' on the login page).",
-            })
+            raise AccountLocked(
+                "Account locked due to too many failed login attempts. Please reset your password via email (click 'Forgot Password?' on the login page)."
+            )
 
         try:
             data = super().validate(attrs)
