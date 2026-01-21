@@ -37,6 +37,18 @@ class UnassignedOrdersAPIView(generics.ListAPIView):
         )
 
 
+class WarehouseShipmentListAPIView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated, IsWarehouseManager]
+    serializer_class = ShipmentSerializer
+
+    def get_queryset(self):
+        qs = Shipment.objects.select_related("order", "courier", "assigned_by")
+        status_param = self.request.query_params.get("status")
+        if status_param:
+            qs = qs.filter(status=status_param)
+        return qs
+
+
 class AssignCourierAPIView(APIView):
     permission_classes = [IsAuthenticated, IsWarehouseManager]
 

@@ -29,6 +29,20 @@ function TrackOrder() {
     const order = payload?.order
     const shipment = payload?.shipment
 
+    const externalTracks = (order?.orderitem || []).map((i) => {
+        const url = i?.delivery_couriers?.tracking_website
+        const urlParam = i?.delivery_couriers?.url_parameter
+        const id = i?.tracking_id
+        if (!url || !urlParam || !id) return null
+        return {
+            orderItemId: i.id,
+            productTitle: i?.product?.title,
+            trackingUrl: `${url}?${urlParam}=${encodeURIComponent(id)}`,
+            trackingId: id,
+            courierName: i?.delivery_couriers?.name,
+        }
+    }).filter(Boolean)
+
     return (
         <div className='container mt-5' style={{ marginBottom: 150 }}>
             <div className='d-flex align-items-center justify-content-between mb-3'>
@@ -153,6 +167,34 @@ function TrackOrder() {
                             </tbody>
                         </table>
                     </div>
+
+                    {externalTracks.length > 0 && (
+                        <div className='rounded shadow p-3 bg-white mt-4'>
+                            <h5 className='mb-3'>External Tracking (Vendor Provided)</h5>
+                            <table className='table align-middle mb-0 bg-white'>
+                                <thead className='bg-light'>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Courier</th>
+                                        <th>Tracking ID</th>
+                                        <th>Link</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {externalTracks.map((t) => (
+                                        <tr key={t.orderItemId}>
+                                            <td>{t.productTitle}</td>
+                                            <td>{t.courierName || '—'}</td>
+                                            <td>{t.trackingId}</td>
+                                            <td>
+                                                <a className='btn btn-sm btn-outline-secondary' href={t.trackingUrl} target='_blank' rel='noreferrer'>Open</a>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
                     <div className='mt-4'>
                         <Link className='btn btn-outline-primary' to='/customer/orders/'>Back to Orders</Link>

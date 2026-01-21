@@ -1,8 +1,7 @@
-import React, { useContext, useState, useEffect } from 'react'
+import React, { useContext, useState } from 'react'
 import { useAuthStore } from '../../store/auth';
 import { Link } from 'react-router-dom';
 import { CartContext } from '../plugin/Context';
-import apiInstance from '../../utils/axios';
 import { useNavigate } from 'react-router-dom';
 
 
@@ -10,12 +9,26 @@ function StoreHeader() {
     const [cartCount] = useContext(CartContext)
     const [search, setSearch] = useState("")
 
-    const [isLoggedIn, user] = useAuthStore((state) => [
+    const [isLoggedIn, user, allUserData] = useAuthStore((state) => [
         state.isLoggedIn,
         state.user,
+        state.allUserData,
     ]);
 
-    console.log("user().vendor_id", user()?.vendor_id);
+    const isWarehouseManager = Boolean(allUserData?.is_warehouse_manager);
+    const isCourier = Boolean(allUserData?.is_courier);
+    const isVendor = (user()?.vendor_id || 0) > 0;
+    const isCustomer = isLoggedIn() && !isWarehouseManager && !isCourier && !isVendor;
+
+    const dashboardLink = isWarehouseManager
+        ? '/warehouse/dashboard'
+        : isCourier
+            ? '/courier/dashboard'
+            : isVendor
+                ? '/vendor/dashboard/'
+                : '/customer/account/';
+
+    const brandLink = isLoggedIn() ? dashboardLink : '/';
 
     const navigate = useNavigate()
 
@@ -32,12 +45,16 @@ function StoreHeader() {
         <div>
             <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
                 <div className="container">
-                    <Link className="navbar-brand" to="/">Multi Vendor E-commerce</Link>
+                    <Link className="navbar-brand" to={brandLink}>Multi Vendor E-commerce</Link>
                     <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                         <span className="navbar-toggler-icon" />
                     </button>
                     <div className="collapse navbar-collapse" id="navbarSupportedContent">
                         <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+
+                            <li className="nav-item">
+                                <Link className="nav-link" to="/">Store</Link>
+                            </li>
 
                             {/* <li className="nav-item dropdown">
                                 <a className="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" >
@@ -54,35 +71,63 @@ function StoreHeader() {
                                 </ul>
                             </li> */}
 
-                            <li className="nav-item dropdown">
-                                <a className="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" >
-                                    Account
-                                </a>
-                                <ul className="dropdown-menu" aria-labelledby="navbarDropdown">
-                                    <li><Link to={'/customer/account/'} className="dropdown-item"><i className='fas fa-user'></i> Account</Link></li>
-                                    <li><Link className="dropdown-item" to={`/customer/orders/`}><i className='fas fa-shopping-cart'></i> Orders</Link></li>
-                                    <li><Link className="dropdown-item" to={`/customer/wishlist/`}><i className='fas fa-heart'></i> Wishlist</Link></li>
-                                    <li><Link className="dropdown-item" to={`/customer/notifications/`}><i className='fas fa-bell fa-shake'></i> Notifications</Link></li>
-                                    <li><Link className="dropdown-item" to={`/customer/settings/`}><i className='fas fa-gear fa-spin'></i> Settings</Link></li>
-                                </ul>
-                            </li>
+                            {isCustomer && (
+                                <li className="nav-item dropdown">
+                                    <a className="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" >
+                                        Account
+                                    </a>
+                                    <ul className="dropdown-menu" aria-labelledby="navbarDropdown">
+                                        <li><Link to={'/customer/account/'} className="dropdown-item"><i className='fas fa-user'></i> Account</Link></li>
+                                        <li><Link className="dropdown-item" to={`/customer/orders/`}><i className='fas fa-shopping-cart'></i> Orders</Link></li>
+                                        <li><Link className="dropdown-item" to={`/customer/wishlist/`}><i className='fas fa-heart'></i> Wishlist</Link></li>
+                                        <li><Link className="dropdown-item" to={`/customer/notifications/`}><i className='fas fa-bell fa-shake'></i> Notifications</Link></li>
+                                        <li><Link className="dropdown-item" to={`/customer/settings/`}><i className='fas fa-gear fa-spin'></i> Settings</Link></li>
+                                    </ul>
+                                </li>
+                            )}
 
-                            <li className="nav-item dropdown">
-                                <a className="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" >
-                                    Vendor
-                                </a>
-                                <ul className="dropdown-menu" aria-labelledby="navbarDropdown">
-                                    <li><Link className="dropdown-item" to="/vendor/dashboard/"> <i className='fas fa-user'></i> Dashboard</Link></li>
-                                    <li><Link className="dropdown-item" to="/vendor/products/"> <i className='bi bi-grid-fill'></i> Products</Link></li>
-                                    <li><Link className="dropdown-item" to="/vendor/product/new/"> <i className='fas fa-plus-circle'></i> Add Products</Link></li>
-                                    <li><Link className="dropdown-item" to="/vendor/orders/"> <i className='fas fa-shopping-cart'></i> Orders</Link></li>
-                                    <li><Link className="dropdown-item" to="/vendor/earning/"> <i className='fas fa-dollar-sign'></i> Earning</Link></li>
-                                    <li><Link className="dropdown-item" to="/vendor/reviews/"> <i className='fas fa-star'></i> Reviews</Link></li>
-                                    <li><Link className="dropdown-item" to="/vendor/coupon/"> <i className='fas fa-tag'></i> Coupon</Link></li>
-                                    <li><Link className="dropdown-item" to="/vendor/notifications/"> <i className='fas fa-bell fa-shake'></i> Notifications</Link></li>
-                                    <li><Link className="dropdown-item" to="/vendor/settings/"> <i className='fas fa-gear fa-spin'></i> Settings</Link></li>
-                                </ul>
-                            </li>
+                            {isWarehouseManager && (
+                                <li className="nav-item dropdown">
+                                    <a className="nav-link dropdown-toggle" href="#" id="navbarDropdownWarehouse" role="button" data-bs-toggle="dropdown" aria-expanded="false" >
+                                        Warehouse
+                                    </a>
+                                    <ul className="dropdown-menu" aria-labelledby="navbarDropdownWarehouse">
+                                        <li><Link className="dropdown-item" to="/warehouse/dashboard"> <i className='fas fa-warehouse'></i> Dashboard</Link></li>
+                                        <li><Link className="dropdown-item" to="/warehouse/orders"> <i className='fas fa-inbox'></i> Unassigned Orders</Link></li>
+                                        <li><Link className="dropdown-item" to="/warehouse/shipments"> <i className='fas fa-truck'></i> All Shipments</Link></li>
+                                    </ul>
+                                </li>
+                            )}
+
+                            {isCourier && (
+                                <li className="nav-item dropdown">
+                                    <a className="nav-link dropdown-toggle" href="#" id="navbarDropdownCourier" role="button" data-bs-toggle="dropdown" aria-expanded="false" >
+                                        Courier
+                                    </a>
+                                    <ul className="dropdown-menu" aria-labelledby="navbarDropdownCourier">
+                                        <li><Link className="dropdown-item" to="/courier/dashboard"> <i className='fas fa-truck'></i> My Shipments</Link></li>
+                                    </ul>
+                                </li>
+                            )}
+
+                            {isVendor && (
+                                <li className="nav-item dropdown">
+                                    <a className="nav-link dropdown-toggle" href="#" id="navbarDropdownVendor" role="button" data-bs-toggle="dropdown" aria-expanded="false" >
+                                        Vendor
+                                    </a>
+                                    <ul className="dropdown-menu" aria-labelledby="navbarDropdownVendor">
+                                        <li><Link className="dropdown-item" to="/vendor/dashboard/"> <i className='fas fa-user'></i> Dashboard</Link></li>
+                                        <li><Link className="dropdown-item" to="/vendor/products/"> <i className='bi bi-grid-fill'></i> Products</Link></li>
+                                        <li><Link className="dropdown-item" to="/vendor/product/new/"> <i className='fas fa-plus-circle'></i> Add Products</Link></li>
+                                        <li><Link className="dropdown-item" to="/vendor/orders/"> <i className='fas fa-shopping-cart'></i> Orders</Link></li>
+                                        <li><Link className="dropdown-item" to="/vendor/earning/"> <i className='fas fa-dollar-sign'></i> Earning</Link></li>
+                                        <li><Link className="dropdown-item" to="/vendor/reviews/"> <i className='fas fa-star'></i> Reviews</Link></li>
+                                        <li><Link className="dropdown-item" to="/vendor/coupon/"> <i className='fas fa-tag'></i> Coupon</Link></li>
+                                        <li><Link className="dropdown-item" to="/vendor/notifications/"> <i className='fas fa-bell fa-shake'></i> Notifications</Link></li>
+                                        <li><Link className="dropdown-item" to="/vendor/settings/"> <i className='fas fa-gear fa-spin'></i> Settings</Link></li>
+                                    </ul>
+                                </li>
+                            )}
 
                         </ul>
                         <div className="d-flex">
@@ -92,7 +137,7 @@ function StoreHeader() {
                         {isLoggedIn()
                             ?
                             <>
-                                <Link className="btn btn-primary me-2" to={'/customer/account/'}>Account</Link>
+                                <Link className="btn btn-primary me-2" to={dashboardLink}>Dashboard</Link>
                                 <Link className="btn btn-primary me-2" to="/logout">Logout</Link>
                             </>
                             :

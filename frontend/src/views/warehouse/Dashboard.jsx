@@ -42,6 +42,7 @@ function Dashboard() {
                             </div>
                         </div>
                         <div className='col-lg-8 mb-3 d-flex align-items-end justify-content-end'>
+                            <Link className='btn btn-outline-secondary me-2' to='/warehouse/shipments'>View All Shipments</Link>
                             <Link className='btn btn-primary' to='/warehouse/orders'>Go to Unassigned Orders</Link>
                         </div>
                     </div>

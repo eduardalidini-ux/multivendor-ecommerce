@@ -49,6 +49,7 @@ import OrderItemDetail from './views/vendor/OrderItemDetail';
 import WarehouseDashboard from './views/warehouse/Dashboard';
 import WarehouseUnassignedOrders from './views/warehouse/UnassignedOrders';
 import WarehouseOrderAssign from './views/warehouse/OrderAssign';
+import WarehouseShipments from './views/warehouse/Shipments';
 import CourierDashboard from './views/courier/Dashboard';
 import CourierShipmentDetail from './views/courier/ShipmentDetail';
 import TrackOrder from './views/tracking/TrackOrder';
@@ -132,6 +133,7 @@ function App() { // Define the main 'App' component.
                         <Route path="/warehouse/dashboard" element={<PrivateRoute><WarehouseDashboard /></PrivateRoute>} />
                         <Route path="/warehouse/orders" element={<PrivateRoute><WarehouseUnassignedOrders /></PrivateRoute>} />
                         <Route path="/warehouse/orders/:orderOid" element={<PrivateRoute><WarehouseOrderAssign /></PrivateRoute>} />
+                        <Route path="/warehouse/shipments" element={<PrivateRoute><WarehouseShipments /></PrivateRoute>} />
 
                         {/* Courier Routes */}
                         <Route path="/courier/dashboard" element={<PrivateRoute><CourierDashboard /></PrivateRoute>} />
