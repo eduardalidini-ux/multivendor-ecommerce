@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'userauths.apps.UserauthsConfig',
     'store.apps.StoreConfig',
     'vendor.apps.VendorConfig',
+    'warehouse.apps.WarehouseConfig',
     'customer',
     'addon',
     'api',
@@ -114,21 +115,18 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
 database_url = os.environ.get("DATABASE_URL")
-if database_url:
-    ssl_require = env.bool("DB_SSL_REQUIRE", default=False)
-    DATABASES['default'] = dj_database_url.parse(
+if not database_url:
+    raise RuntimeError("DATABASE_URL is required (Supabase Postgres).")
+
+ssl_require = env.bool("DB_SSL_REQUIRE", default=False)
+DATABASES = {
+    'default': dj_database_url.parse(
         database_url,
         conn_max_age=600,
         ssl_require=ssl_require,
     )
+}
 
 
 # Password validation

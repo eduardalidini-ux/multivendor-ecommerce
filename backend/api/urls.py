@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from userauths import views as userauths_views
 from store import views as store_views
 from customer import views as customer_views
@@ -10,6 +10,8 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
     path('', userauths_views.getRoutes),
+
+    path('warehouse/', include('warehouse.urls')),
 
     # Storage (Supabase S3-compatible) helper endpoints
     path('storage/presign-upload/', storage_views.PresignUploadView.as_view(), name='storage-presign-upload'),

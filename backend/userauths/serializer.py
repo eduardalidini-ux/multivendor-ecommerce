@@ -42,6 +42,14 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         except:
             token['vendor_id'] = 0
 
+        courier_profile = getattr(user, "courier_profile", None)
+        token["is_courier"] = bool(courier_profile and getattr(courier_profile, "is_active", False))
+
+        warehouse_manager_profile = getattr(user, "warehouse_manager_profile", None)
+        token["is_warehouse_manager"] = bool(
+            warehouse_manager_profile and getattr(warehouse_manager_profile, "is_active", False)
+        )
+
         # ...
 
         # Return the token with custom claims

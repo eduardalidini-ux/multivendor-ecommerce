@@ -1,7 +1,5 @@
 from django.db import models
-
-# Create your models here.
-from django.db import models
+from django.db.models.functions import Lower
 from shortuuid.django_fields import ShortUUIDField
 from django.utils.html import mark_safe
 from django.utils import timezone
@@ -274,6 +272,17 @@ class Product(models.Model):
     class Meta:
         ordering = ['-id']
         verbose_name_plural = "Products"
+        indexes = [
+            models.Index(fields=["slug"], name="store_product_slug_idx"),
+            models.Index(fields=["status"], name="store_product_status_idx"),
+            models.Index(fields=["vendor"], name="store_product_vendor_idx"),
+            models.Index(fields=["vendor", "status"], name="st_prod_v_stat_idx"),
+            models.Index(fields=["status", "featured"], name="st_prod_stat_feat_idx"),
+            models.Index(fields=["status", "hot_deal"], name="st_prod_stat_hot_idx"),
+            models.Index(fields=["status", "special_offer"], name="st_prod_stat_offer_idx"),
+            models.Index(fields=["status", "type"], name="store_product_status_type_idx"),
+            models.Index(fields=["date"], name="store_product_date_idx"),
+        ]
 
     # Returns an HTML image tag for the product's image
     def product_image(self):
@@ -453,6 +462,14 @@ class Cart(models.Model):
     cart_id = models.CharField(max_length=1000, null=True, blank=True)
     date = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["cart_id"], name="store_cart_cartid_idx"),
+            models.Index(fields=["cart_id", "user"], name="store_cart_cartid_user_idx"),
+            models.Index(fields=["user"], name="store_cart_user_idx"),
+            models.Index(fields=["product"], name="store_cart_product_idx"),
+        ]
+
     def __str__(self):
         return f'{self.cart_id} - {self.product.title}'
 
@@ -504,6 +521,15 @@ class CartOrder(models.Model):
     class Meta:
         ordering = ["-date"]
         verbose_name_plural = "Cart Order"
+        indexes = [
+            models.Index(fields=["oid"], name="store_order_oid_idx"),
+            models.Index(fields=["stripe_session_id"], name="store_order_stripe_session_idx"),
+            models.Index(fields=["payment_status"], name="store_order_payment_status_idx"),
+            models.Index(fields=["order_status"], name="store_order_order_status_idx"),
+            models.Index(fields=["buyer"], name="store_order_buyer_idx"),
+            models.Index(fields=["date"], name="store_order_date_idx"),
+            models.Index(fields=["payment_status", "date"], name="store_order_payment_date_idx"),
+        ]
 
     def __str__(self):
         return self.oid
@@ -561,6 +587,16 @@ class CartOrderItem(models.Model):
     class Meta:
         verbose_name_plural = "Cart Order Item"
         ordering = ["-date"]
+        indexes = [
+            models.Index(fields=["oid"], name="store_orderitem_oid_idx"),
+            models.Index(fields=["vendor"], name="store_orderitem_vendor_idx"),
+            models.Index(fields=["vendor", "date"], name="st_oit_v_date_idx"),
+            models.Index(fields=["order"], name="store_orderitem_order_idx"),
+            models.Index(fields=["order", "vendor"], name="st_oit_o_v_idx"),
+            models.Index(fields=["product"], name="store_orderitem_product_idx"),
+            models.Index(fields=["delivery_status"], name="st_oit_del_stat_idx"),
+            models.Index(fields=["date"], name="store_orderitem_date_idx"),
+        ]
         
     # Method to generate an HTML image tag for the order item
     def order_img(self):
@@ -597,6 +633,12 @@ class Review(models.Model):
     class Meta:
         verbose_name_plural = "Reviews & Rating"
         ordering = ["-date"]
+        indexes = [
+            models.Index(fields=["product"], name="store_review_product_idx"),
+            models.Index(fields=["active"], name="store_review_active_idx"),
+            models.Index(fields=["product", "active"], name="st_rev_prod_act_idx"),
+            models.Index(fields=["date"], name="store_review_date_idx"),
+        ]
         
     # Method to return a string representation of the object
     def __str__(self):
@@ -654,6 +696,11 @@ class Notification(models.Model):
     
     class Meta:
         verbose_name_plural = "Notification"
+        indexes = [
+            models.Index(fields=["vendor", "seen"], name="store_noti_vendor_seen_idx"),
+            models.Index(fields=["user", "seen"], name="store_noti_user_seen_idx"),
+            models.Index(fields=["date"], name="store_noti_date_idx"),
+        ]
     
     # Method to return a string representation of the object
     def __str__(self):
@@ -740,6 +787,12 @@ class Coupon(models.Model):
     
     class Meta:
         ordering =['-id']
+        indexes = [
+            models.Index(fields=["vendor", "active"], name="store_coupon_vendor_active_idx"),
+            models.Index(fields=["active"], name="store_coupon_active_idx"),
+            models.Index(fields=["cid"], name="store_coupon_cid_idx"),
+            models.Index(Lower("code"), name="store_coupon_code_lower_idx"),
+        ]
 
 # Define a model for Coupon Users
 class CouponUsers(models.Model):
