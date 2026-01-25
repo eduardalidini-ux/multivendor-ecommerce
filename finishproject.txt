@@ -1,0 +1,37 @@
+Menaxhim të magazinës (ruajtje dhe përditësim stokesh). DONE
+do we have this: if yes then its okay, at any form doesnt have to be the best practice, 
+if we dont have it then we need to implement it.
+
+Masat bazë të sigurisë për ruajtjen e të dhënave sensitive. DONE
+same thing here, if we dont have it then we need to implement it.
+
+B. Kërkesat e bazës së të dhënave
+
+check below my professors requirements: if we dont have any of these, 
+then we need to implement basic for each of them.
+
+Baza e të dhënave duhet të:
+
+1. Jetë relacionale dhe e projektuar në mënyrë të logjikshme, me tabela të ndara sipas nevojave të aplikacionit. DONE
+2. Përfshijë transaksione për operacionet kritike (porosi, shitje, pagesë, transport, magazinim). DONE
+3. Përdorë Triggerë, Stored Procedures dhe Funksione për automatizim dhe konsistencë. DONE
+4. Ruajë të dhënat sensitive të enkriptuara (fjalëkalime, kartë krediti, PIN, etj.). DONE
+5. Përmbajë indekse të krijuara me arsyetim teknik për optimizim kërkimesh. DONE
+6. Përdorë role dhe të drejta përdoruesish me parimin e “më pak privilegjeve të mundshme”. DONE
+
+C. Kërkesat e sigurisë
+
+check below my professors requirements: if we dont have any of these, 
+then we need to implement basic for each of them.
+
+Aplikacioni duhet të:
+
+1. Lejojë akses vetëm për përdoruesit e autorizuar (p.sh. rolet: klient, financë, magazinë). DONE
+2. Parandalojë aksesin direkt nga jashtë (faqet e brendshme të jenë të mbrojtura). DONE
+3. Zbatojë kontroll të inputeve të përdoruesit, si në klient (JavaScript) ashtu edhe në server. DONE
+4. Zbatojë URL rewrite për fshehjen e emrave të faqeve reale. DONE
+5. Pas tre tentativave të pasakta për fjalëkalim, llogaria të bllokohet dhe përdoruesit t’i dërgohet email me kod verifikimi për zhbllokim. DONE
+6. Sigurojë integritetin e të dhënave gjatë ciklit të porosisë (nga pagesa deri te dorëzimi). DONE
+
+3. Kredencialet e lidhjes me bazën e të dhënave duhet të jenë të kufizuara (jo root/sysdba). DONE
+i think we have this, but you check again.

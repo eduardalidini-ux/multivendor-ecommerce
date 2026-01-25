@@ -108,21 +108,21 @@ PHASE 7 — FRONTEND: INTERNAL TRACKING PAGE (REPLACES FAKE URL)
     [x] show shipment status + timeline events
     [x] show courier name (if assigned)
     [x] show order items overview
-[ ] Replace tracking links across customer/vendor/admin UI to point to internal tracking first:
+[x] Replace tracking links across customer/vendor/admin UI to point to internal tracking first:
     [x] Customer order detail: Track -> /track/order/<order_oid>
     [x] Vendor order detail: Track -> /track/order/<order_oid>
-    [ ] Keep external courier tracking link optional (secondary button) if you still want it
+    [x] Keep external courier tracking link optional (secondary button) if you still want it
 
 ------------------------------------------------------------
 PHASE 8 — HARDENING / QA (MINIMIZE ERRORS)
 [ ] Add input validation + clear API errors (400/403/404)
 [ ] Ensure sensitive endpoints are not AllowAny
 [ ] Ensure assignment and status updates use transaction.atomic()
-[ ] Manual QA checklist:
-    [ ] Place order -> pay -> order appears in warehouse unassigned
-    [ ] Assign courier -> courier sees it
-    [ ] Courier updates statuses -> tracking page updates timeline
-    [ ] Delivered -> all order items marked delivered + order becomes Fulfilled when appropriate
+[x] Manual QA checklist:
+    [x] Place order -> pay -> order appears in warehouse unassigned
+    [x] Assign courier -> courier sees it
+    [x] Courier updates statuses -> tracking page updates timeline
+    [x] Delivered -> all order items marked delivered + order becomes Fulfilled when appropriate
 [ ] Deploy verification:
     [ ] Run migrations on Render DB
     [ ] Smoke-test login + tracking page + dashboards

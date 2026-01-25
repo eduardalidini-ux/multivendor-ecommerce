@@ -11,13 +11,13 @@ function ShipmentDetail() {
     const [shipment, setShipment] = useState(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [note, setNote] = useState('')
 
     const fetchShipment = async () => {
         setLoading(true)
         try {
-            const listRes = await axios.get('warehouse/courier/my-shipments/')
-            const match = (listRes.data || []).find((s) => String(s.id) === String(param.shipmentId))
-            setShipment(match || null)
+            const res = await axios.get(`warehouse/courier/shipment/${param.shipmentId}/`)
+            setShipment(res.data || null)
         } finally {
             setLoading(false)
         }
@@ -32,14 +32,33 @@ function ShipmentDetail() {
 
         setSaving(true)
         try {
-            const res = await axios.patch(`warehouse/courier/shipment/${shipment.id}/status/`, { status })
+            const payload = note?.trim() ? { status, message: note.trim() } : { status }
+            const res = await axios.patch(`warehouse/courier/shipment/${shipment.id}/status/`, payload)
             setShipment(res.data)
+            setNote('')
             Swal.fire({ icon: 'success', title: 'Status updated' })
         } catch (e) {
             Swal.fire({ icon: 'error', title: e?.response?.data?.message || 'Failed to update status' })
         } finally {
             setSaving(false)
         }
+    }
+
+    const allowedNext = {
+        assigned: ['picked_up', 'failed'],
+        picked_up: ['out_for_delivery', 'failed', 'returned'],
+        out_for_delivery: ['delivered', 'failed', 'returned'],
+        failed: ['returned'],
+        returned: [],
+        delivered: [],
+        pending_assignment: [],
+    }
+
+    const canSetStatus = (targetStatus) => {
+        if (!shipment?.status) return false
+        if (saving) return false
+        if (shipment.status === targetStatus) return false
+        return (allowedNext[shipment.status] || []).includes(targetStatus)
     }
 
     return (
@@ -81,12 +100,22 @@ function ShipmentDetail() {
 
                     <div className='rounded shadow p-3 bg-white mb-4'>
                         <h5 className='mb-3'>Update Status</h5>
+                        <div className='mb-3'>
+                            <label className='form-label'>Note (optional)</label>
+                            <input
+                                className='form-control'
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                                placeholder='E.g. Customer not available, left at reception...'
+                                disabled={saving}
+                            />
+                        </div>
                         <div className='d-flex flex-wrap gap-2'>
-                            <button className='btn btn-outline-primary me-2 mb-2' disabled={saving} onClick={() => updateStatus('picked_up')}>Picked Up</button>
-                            <button className='btn btn-outline-primary me-2 mb-2' disabled={saving} onClick={() => updateStatus('out_for_delivery')}>Out For Delivery</button>
-                            <button className='btn btn-outline-success me-2 mb-2' disabled={saving} onClick={() => updateStatus('delivered')}>Delivered</button>
-                            <button className='btn btn-outline-danger me-2 mb-2' disabled={saving} onClick={() => updateStatus('failed')}>Failed</button>
-                            <button className='btn btn-outline-secondary me-2 mb-2' disabled={saving} onClick={() => updateStatus('returned')}>Returned</button>
+                            <button className='btn btn-outline-primary me-2 mb-2' disabled={!canSetStatus('picked_up')} onClick={() => updateStatus('picked_up')}>Picked Up</button>
+                            <button className='btn btn-outline-primary me-2 mb-2' disabled={!canSetStatus('out_for_delivery')} onClick={() => updateStatus('out_for_delivery')}>Out For Delivery</button>
+                            <button className='btn btn-outline-success me-2 mb-2' disabled={!canSetStatus('delivered')} onClick={() => updateStatus('delivered')}>Delivered</button>
+                            <button className='btn btn-outline-danger me-2 mb-2' disabled={!canSetStatus('failed')} onClick={() => updateStatus('failed')}>Failed</button>
+                            <button className='btn btn-outline-secondary me-2 mb-2' disabled={!canSetStatus('returned')} onClick={() => updateStatus('returned')}>Returned</button>
                         </div>
                         <div className='text-muted' style={{ fontSize: 12 }}>
                             Only use "Delivered" when the package is successfully delivered.
