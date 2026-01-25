@@ -97,6 +97,16 @@ class CourierMyShipmentsAPIView(generics.ListAPIView):
         return Shipment.objects.filter(courier=self.request.user).select_related("order", "courier", "assigned_by")
 
 
+class CourierShipmentDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsCourier]
+
+    def get(self, request, shipment_id: int):
+        shipment = get_object_or_404(Shipment.objects.select_related("order", "courier", "assigned_by"), id=shipment_id)
+        if shipment.courier_id != request.user.id:
+            return Response({"message": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        return Response(ShipmentSerializer(shipment).data, status=status.HTTP_200_OK)
+
+
 class CourierShipmentStatusUpdateAPIView(APIView):
     permission_classes = [IsAuthenticated, IsCourier]
 
@@ -114,6 +124,24 @@ class CourierShipmentStatusUpdateAPIView(APIView):
         valid_statuses = {c[0] for c in Shipment._meta.get_field("status").choices}
         if new_status not in valid_statuses:
             return Response({"message": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
+
+        current_status = shipment.status
+        allowed_next = {
+            "assigned": {"picked_up", "failed"},
+            "picked_up": {"out_for_delivery", "failed", "returned"},
+            "out_for_delivery": {"delivered", "failed", "returned"},
+            "failed": {"returned"},
+            "returned": set(),
+            "delivered": set(),
+            "pending_assignment": set(),
+        }
+
+        if new_status != current_status:
+            if new_status not in allowed_next.get(current_status, set()):
+                return Response(
+                    {"message": f"Invalid status transition: {current_status} -> {new_status}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         shipment.status = new_status
         now = timezone.now()

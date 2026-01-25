@@ -3,12 +3,59 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import APIException
-from rest_framework.validators import UniqueValidator
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+import logging
+import random
+
+import requests
+from django.conf import settings
 
 from django.utils import timezone
 
 from api.storage_s3 import presign_get
+
+logger = logging.getLogger(__name__)
+
+
+def generate_numeric_otp(length: int = 6) -> str:
+    return "".join(str(random.randint(0, 9)) for _ in range(length))
+
+
+def send_unlock_code_email(*, to_email: str, to_name: str, otp: str) -> None:
+    api_key = getattr(settings, "BREVO_API_KEY", "")
+    sender_email = getattr(settings, "BREVO_SENDER_EMAIL", "")
+    sender_name = getattr(settings, "BREVO_SENDER_NAME", "")
+
+    if not api_key or not sender_email:
+        logger.warning("Brevo not configured; skipping unlock OTP email")
+        return
+
+    subject = "Account Unlock Code"
+    text_content = f"Your account unlock code is: {otp}"
+    html_content = f"<p>Your account unlock code is: <strong>{otp}</strong></p>"
+
+    payload = {
+        "sender": {"email": sender_email, "name": sender_name or ""},
+        "to": [{"email": to_email, "name": to_name or ""}],
+        "subject": subject,
+        "htmlContent": html_content,
+        "textContent": text_content,
+    }
+
+    try:
+        resp = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            json=payload,
+            headers={
+                "api-key": api_key,
+                "accept": "application/json",
+                "content-type": "application/json",
+            },
+            timeout=getattr(settings, "BREVO_TIMEOUT", 15),
+        )
+        if not resp.ok:
+            logger.warning(f"Brevo unlock email failed {resp.status_code}: {resp.text}")
+    except Exception:
+        logger.exception("Brevo unlock email send exception")
 
 
 # Define a custom serializer that inherits from TokenObtainPairSerializer
@@ -73,9 +120,13 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             if user:
                 user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
                 if user.failed_login_attempts >= 3:
+                    newly_locked = not user.is_locked
                     user.is_locked = True
                     user.locked_at = timezone.now()
-                user.save(update_fields=["failed_login_attempts", "is_locked", "locked_at"])
+                    if newly_locked:
+                        user.otp = generate_numeric_otp(6)
+                        send_unlock_code_email(to_email=user.email, to_name=user.username, otp=user.otp)
+                user.save(update_fields=["failed_login_attempts", "is_locked", "locked_at", "otp"])
             raise
 
         if user:

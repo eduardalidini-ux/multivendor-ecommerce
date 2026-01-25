@@ -26,6 +26,8 @@ urlpatterns = [
     path('user/test/', userauths_views.testEndPoint, name='auth_register'),
     path('user/password-reset/<str:email>/', userauths_views.PasswordEmailVerify.as_view(), name='password_reset'),
     path('user/password-change/', userauths_views.PasswordChangeView.as_view(), name='password_reset'),
+    path('user/unlock/request/', userauths_views.UnlockRequestView.as_view(), name='unlock-request'),
+    path('user/unlock/confirm/', userauths_views.UnlockConfirmView.as_view(), name='unlock-confirm'),
 
     # Adoon Endpoint
     path('addon/', store_views.ConfigSettingsDetailView.as_view(), name='addon'),

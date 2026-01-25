@@ -9,6 +9,7 @@ urlpatterns = [
     path("shipments/", views.WarehouseShipmentListAPIView.as_view()),
     path("assign/", views.AssignCourierAPIView.as_view()),
     path("courier/my-shipments/", views.CourierMyShipmentsAPIView.as_view()),
+    path("courier/shipment/<int:shipment_id>/", views.CourierShipmentDetailAPIView.as_view()),
     path("courier/shipment/<int:shipment_id>/status/", views.CourierShipmentStatusUpdateAPIView.as_view()),
     path("track/order/<str:order_oid>/", views.TrackOrderAPIView.as_view()),
 ]

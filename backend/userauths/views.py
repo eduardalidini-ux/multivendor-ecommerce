@@ -20,6 +20,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.views import APIView
 from django.utils import timezone
 
 # Others
@@ -30,7 +31,14 @@ import random
 from drf_spectacular.utils import extend_schema, inline_serializer
 
 # Serializers
-from userauths.serializer import MyTokenObtainPairSerializer, ProfileSerializer, RegisterSerializer, UserSerializer
+from userauths.serializer import (
+    MyTokenObtainPairSerializer,
+    ProfileSerializer,
+    RegisterSerializer,
+    UserSerializer,
+    generate_numeric_otp,
+    send_unlock_code_email,
+)
 
 
 # Models
@@ -301,3 +309,81 @@ class PasswordChangeView(generics.CreateAPIView):
         ])
 
         return Response({"message": "Password Changed Successfully"}, status=status.HTTP_201_CREATED)
+
+
+class UnlockRequestView(APIView):
+    permission_classes = (AllowAny,)
+
+    @extend_schema(
+        request=inline_serializer(
+            name="UnlockRequest",
+            fields={
+                "email": serializers.EmailField(),
+            },
+        ),
+        responses=inline_serializer(
+            name="UnlockRequestResponse",
+            fields={
+                "message": serializers.CharField(),
+            },
+        ),
+    )
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"message": "email is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.filter(email=email).first()
+        if not user:
+            return Response({"message": "User with this email does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not getattr(user, "is_locked", False):
+            return Response({"message": "Account is not locked"}, status=status.HTTP_200_OK)
+
+        user.otp = generate_numeric_otp(6)
+        user.save(update_fields=["otp"])
+        send_unlock_code_email(to_email=user.email, to_name=user.username, otp=user.otp)
+        return Response({"message": "Unlock code sent"}, status=status.HTTP_200_OK)
+
+
+class UnlockConfirmView(APIView):
+    permission_classes = (AllowAny,)
+
+    @extend_schema(
+        request=inline_serializer(
+            name="UnlockConfirm",
+            fields={
+                "email": serializers.EmailField(),
+                "otp": serializers.CharField(),
+            },
+        ),
+        responses=inline_serializer(
+            name="UnlockConfirmResponse",
+            fields={
+                "message": serializers.CharField(),
+            },
+        ),
+    )
+    def post(self, request):
+        email = request.data.get("email")
+        otp = request.data.get("otp")
+        if not email or not otp:
+            return Response({"message": "email and otp are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.filter(email=email).first()
+        if not user:
+            return Response({"message": "User with this email does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not getattr(user, "is_locked", False):
+            return Response({"message": "Account is not locked"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if (user.otp or "").strip() != str(otp).strip():
+            return Response({"message": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.failed_login_attempts = 0
+        user.is_locked = False
+        user.locked_at = None
+        user.otp = ""
+        user.save(update_fields=["failed_login_attempts", "is_locked", "locked_at", "otp"])
+
+        return Response({"message": "Account unlocked"}, status=status.HTTP_200_OK)
