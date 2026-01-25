@@ -37,6 +37,12 @@ ALLOWED_HOSTS = env.list(
     default=["website-domain.com", "127.0.0.1", "localhost", ".onrender.com"],
 )
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=not DEBUG)
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=not DEBUG)
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=not DEBUG)
 
 
 # Application definition
@@ -221,7 +227,7 @@ if USE_S3_MEDIA:
             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
         },
         "staticfiles": {
-            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
     }
 
